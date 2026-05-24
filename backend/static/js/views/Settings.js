@@ -70,16 +70,6 @@ export default defineComponent({
         </form>
       </div>
 
-      <!-- Info -->
-      <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-        <h2 class="text-base font-semibold text-white mb-3">Security Notes</h2>
-        <ul class="text-sm text-gray-500 space-y-2 list-disc list-inside">
-          <li>Access tokens expire after 15 minutes and are refreshed automatically.</li>
-          <li>Refresh tokens rotate on every use and expire after 30 days.</li>
-          <li>Set <code class="text-gray-400 font-mono">ALLOWED_ORIGINS</code> in your environment to restrict cross-origin access.</li>
-          <li>Set <code class="text-gray-400 font-mono">SECRET_KEY</code> to a strong random value in production.</li>
-        </ul>
-      </div>
     </div>
   `,
 })

@@ -71,13 +71,15 @@ export default defineComponent({
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <router-link to="/nodes" class="text-gray-500 hover:text-gray-300 text-sm">← Nodes</router-link>
+            <router-link to="/nodes" class="flex items-center gap-1 text-gray-500 hover:text-gray-300 text-sm">
+              <Icon name="arrow-left" :size="14" /> Nodes
+            </router-link>
             <span class="text-gray-700">/</span>
             <h1 class="text-2xl font-bold text-white">{{ node.name }}</h1>
             <span :class="['w-2.5 h-2.5 rounded-full', node.connected ? 'bg-green-500' : 'bg-gray-600']"></span>
           </div>
-          <button @click="refreshStats" class="px-4 py-2 text-sm rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors">
-            ↻ Refresh Stats
+          <button @click="refreshStats" class="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors">
+            <Icon name="refresh" :size="14" /> Refresh Stats
           </button>
         </div>
 
@@ -107,7 +109,7 @@ export default defineComponent({
                 <dd class="text-white">{{ fmt(node.self_info?.radio_sf) }} / {{ fmt(node.self_info?.radio_cr) }}</dd>
               </div>
             </dl>
-            <button @click="showRadioEdit = true" class="mt-4 text-sm text-mesh-400 hover:text-mesh-300">Edit radio config →</button>
+            <button @click="showRadioEdit = true" class="mt-4 flex items-center gap-1 text-sm text-mesh-400 hover:text-mesh-300">Edit radio config <Icon name="arrow-right" :size="13" /></button>
           </div>
 
           <!-- Live stats -->
@@ -175,7 +177,7 @@ export default defineComponent({
               <label class="block text-sm text-gray-300 mb-1.5">TX Power (dBm, leave blank to keep)</label>
               <input v-model.number="radioForm.tx_power" type="number" class="w-full px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm focus:outline-none focus:border-mesh-500" />
             </div>
-            <p class="text-xs text-yellow-500">⚠ Incorrect radio settings may disconnect the node from the mesh.</p>
+            <p class="flex items-center gap-1.5 text-xs text-yellow-500"><Icon name="warning" :size="14" /> Incorrect radio settings may disconnect the node from the mesh.</p>
             <div class="flex justify-end gap-3 pt-1">
               <button type="button" @click="showRadioEdit = false" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 text-sm hover:bg-gray-600 transition-colors">Cancel</button>
               <button type="submit" class="px-5 py-2 rounded-lg bg-mesh-600 hover:bg-mesh-500 text-white text-sm font-medium transition-colors">Send Config</button>

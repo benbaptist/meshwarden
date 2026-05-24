@@ -56,8 +56,8 @@ export default defineComponent({
       <div class="w-full max-w-md">
         <!-- Header -->
         <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-mesh-900 border border-mesh-700 mb-4">
-            <span class="text-3xl">⬡</span>
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-mesh-900 border border-mesh-700 mb-4 text-mesh-500">
+            <Logo :size="34" />
           </div>
           <h1 class="text-3xl font-bold text-white">MeshWarden</h1>
           <p class="text-gray-400 mt-1">Initial Setup</p>

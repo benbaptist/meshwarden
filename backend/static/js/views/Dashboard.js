@@ -88,7 +88,7 @@ export default defineComponent({
           <div class="bg-gray-900 rounded-xl border border-gray-800 divide-y divide-gray-800">
             <div v-if="!recentMessages.length" class="p-6 text-center text-gray-600 text-sm">No messages yet</div>
             <div v-for="msg in recentMessages" :key="msg.id" class="px-4 py-3 flex items-start gap-3">
-              <span class="text-lg flex-shrink-0">{{ msg.msg_type === 'channel' ? '📢' : '💬' }}</span>
+              <span :class="['flex-shrink-0 mt-0.5', msg.msg_type === 'channel' ? 'text-purple-400' : 'text-mesh-500']"><Icon :name="'chat'" :size="16" /></span>
               <div class="min-w-0 flex-1">
                 <div class="text-sm text-gray-200 truncate">{{ msg.text }}</div>
                 <div class="text-xs text-gray-500 mt-0.5">{{ relativeTime(msg.timestamp) }}</div>

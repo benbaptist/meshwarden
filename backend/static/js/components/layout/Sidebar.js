@@ -4,12 +4,12 @@ import { useAuthStore } from '../../stores/auth.js'
 import { useNodesStore } from '../../stores/nodes.js'
 
 const NAV = [
-  { path: '/',         label: 'Dashboard', icon: '⊞' },
-  { path: '/chat',     label: 'Chat',      icon: '💬' },
-  { path: '/nodes',    label: 'Nodes',     icon: '📡' },
-  { path: '/contacts', label: 'Contacts',  icon: '👥' },
-  { path: '/groups',   label: 'Groups',    icon: '🗂' },
-  { path: '/settings', label: 'Settings',  icon: '⚙' },
+  { path: '/',         label: 'Dashboard', icon: 'grid' },
+  { path: '/chat',     label: 'Chat',      icon: 'chat' },
+  { path: '/nodes',    label: 'Nodes',     icon: 'cpu-chip' },
+  { path: '/contacts', label: 'Contacts',  icon: 'users' },
+  { path: '/groups',   label: 'Groups',    icon: 'user-group' },
+  { path: '/settings', label: 'Settings',  icon: 'cog' },
 ]
 
 export default defineComponent({
@@ -30,11 +30,11 @@ export default defineComponent({
     return { NAV, auth, connectedCount, totalCount, isActive }
   },
   template: `
-    <aside class="w-56 flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
+    <aside class="hidden md:flex flex-col w-56 flex-shrink-0 bg-gray-900 border-r border-gray-800 h-full">
       <!-- Logo -->
       <div class="px-5 py-5 border-b border-gray-800">
-        <div class="flex items-center gap-2">
-          <span class="text-mesh-500 text-xl">⬡</span>
+        <div class="flex items-center gap-2.5">
+          <span class="text-mesh-500"><Logo :size="22" /></span>
           <span class="font-bold text-white tracking-wide text-base">MeshWarden</span>
         </div>
         <div class="mt-1.5 text-xs text-gray-500">
@@ -55,7 +55,7 @@ export default defineComponent({
               : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
           ]"
         >
-          <span class="text-base w-5 text-center">{{ item.icon }}</span>
+          <Icon :name="item.icon" :size="18" />
           {{ item.label }}
         </router-link>
       </nav>
@@ -65,8 +65,11 @@ export default defineComponent({
         <div class="text-xs text-gray-500 mb-2 truncate">{{ auth.user?.username }}</div>
         <button
           @click="auth.logout()"
-          class="text-xs text-gray-500 hover:text-red-400 transition-colors"
-        >Sign out</button>
+          class="flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors"
+        >
+          <Icon name="logout" :size="14" />
+          Sign out
+        </button>
       </div>
     </aside>
   `,

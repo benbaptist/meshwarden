@@ -25,7 +25,8 @@ export default defineComponent({
       return list.slice().sort((a, b) => new Date(b.last_advert || 0) - new Date(a.last_advert || 0))
     })
 
-    const TYPE_ICONS = { NONE: '○', CLI: '👤', REP: '📡', ROOM: '🏠', SENS: '🌡' }
+    const TYPE_LABELS = { NONE: 'None', CLI: 'Client', REP: 'Repeater', ROOM: 'Room', SENS: 'Sensor' }
+    const TYPE_ICONS  = { NONE: 'user', CLI: 'user', REP: 'signal', ROOM: 'home', SENS: 'chart-bar' }
 
     function relativeTime(iso) {
       if (!iso) return '—'
@@ -110,7 +111,9 @@ export default defineComponent({
                 >{{ tag }}</span>
               </td>
               <td class="px-4 py-3 text-right">
-                <router-link :to="\`/contacts/\${c.id}\`" class="text-mesh-400 hover:text-mesh-300 text-xs transition-colors">View →</router-link>
+                <router-link :to="\`/contacts/\${c.id}\`" class="flex items-center gap-1 text-mesh-400 hover:text-mesh-300 text-xs transition-colors">
+                  View <Icon name="arrow-right" :size="12" />
+                </router-link>
               </td>
             </tr>
           </tbody>
