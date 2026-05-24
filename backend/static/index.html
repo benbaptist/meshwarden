@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-950">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeshWarden</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="MeshCore node management and mesh observation dashboard" />
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.svg" />
+
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            mesh: {
+              50:  '#f0fdf4',
+              100: '#dcfce7',
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              900: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Socket.IO client (global `io`) -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+  <!-- ApexCharts (global `ApexCharts`) -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js"></script>
+
+  <!-- Vue 3 + Vue Router + Pinia via import map -->
+  <script type="importmap">
+  {
+    "imports": {
+      "vue":              "https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.esm-browser.prod.js",
+      "vue-router":       "https://cdn.jsdelivr.net/npm/vue-router@4.5.0/dist/vue-router.esm-browser.prod.js",
+      "vue-demi":         "https://cdn.jsdelivr.net/npm/vue-demi@0.14.10/lib/v3/index.mjs",
+      "@vue/devtools-api": "/static/js/devtools-api-stub.js",
+      "pinia":            "https://cdn.jsdelivr.net/npm/pinia@2.3.1/dist/pinia.esm-browser.js"
+    }
+  }
+  </script>
+
+  <style>
+    /* Base resets layered below Tailwind utilities */
+    [v-cloak] { display: none !important; }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+    .slide-enter-active, .slide-leave-active { transition: transform 0.2s ease, opacity 0.2s ease; }
+    .slide-enter-from, .slide-leave-to { transform: translateX(-8px); opacity: 0; }
+  </style>
+</head>
+<body class="h-full text-gray-100 antialiased">
+  <div id="app" v-cloak class="h-full"></div>
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

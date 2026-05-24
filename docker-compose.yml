@@ -1,0 +1,12 @@
+services:
+  meshwarden:
+    build:
+      context: ./backend
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
+    restart: unless-stopped
+    devices: []  # Add serial devices here, e.g. /dev/ttyUSB0:/dev/ttyUSB0

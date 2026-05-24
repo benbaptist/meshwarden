@@ -1,0 +1,261 @@
+import { defineComponent, ref, onMounted } from 'vue'
+import { useGroupsStore } from '../stores/groups.js'
+import { useContactsStore } from '../stores/contacts.js'
+import { useToast } from '../components/shared/Toast.js'
+
+export default defineComponent({
+  name: 'Groups',
+  setup() {
+    const groups = useGroupsStore()
+    const contacts = useContactsStore()
+    const toast = useToast()
+
+    const showCreateForm = ref(false)
+    const showDetail = ref(null)   // {group, members, automations}
+    const confirmDeleteGroup = ref(null)
+    const form = ref({ name: '', description: '', color: '#3B82F6' })
+    const ruleForm = ref({ rule_type: 'telemetry', interval_seconds: 300, enabled: true })
+    const showAddMember = ref(false)
+    const selectedContactId = ref(null)
+    const showRuleForm = ref(false)
+
+    onMounted(async () => {
+      await groups.fetchAll()
+      if (!contacts.contacts.length) await contacts.fetchAll()
+    })
+
+    async function createGroup() {
+      try {
+        await groups.create(form.value)
+        form.value = { name: '', description: '', color: '#3B82F6' }
+        showCreateForm.value = false
+        toast.success('Group created')
+      } catch (e) {
+        toast.error(e.message)
+      }
+    }
+
+    async function openDetail(group) {
+      const detail = await groups.fetchOne(group.id)
+      const automations = await groups.fetchAutomations(group.id)
+      showDetail.value = { ...detail, automations }
+    }
+
+    async function deleteGroup() {
+      if (!confirmDeleteGroup.value) return
+      try {
+        await groups.remove(confirmDeleteGroup.value.id)
+        toast.success('Group deleted')
+        if (showDetail.value?.id === confirmDeleteGroup.value.id) showDetail.value = null
+      } catch (e) {
+        toast.error(e.message)
+      }
+      confirmDeleteGroup.value = null
+    }
+
+    async function addMember() {
+      if (!selectedContactId.value || !showDetail.value) return
+      try {
+        await groups.addMember(showDetail.value.id, selectedContactId.value)
+        await openDetail(showDetail.value)
+        showAddMember.value = false
+        selectedContactId.value = null
+        toast.success('Member added')
+      } catch (e) {
+        toast.error(e.message)
+      }
+    }
+
+    async function removeMember(contactId) {
+      try {
+        await groups.removeMember(showDetail.value.id, contactId)
+        await openDetail(showDetail.value)
+        toast.success('Member removed')
+      } catch (e) {
+        toast.error(e.message)
+      }
+    }
+
+    async function createRule() {
+      try {
+        await groups.createAutomation(showDetail.value.id, ruleForm.value)
+        await openDetail(showDetail.value)
+        showRuleForm.value = false
+        toast.success('Automation rule added')
+      } catch (e) {
+        toast.error(e.message)
+      }
+    }
+
+    async function deleteRule(ruleId) {
+      try {
+        await groups.deleteAutomation(showDetail.value.id, ruleId)
+        await openDetail(showDetail.value)
+        toast.success('Rule deleted')
+      } catch (e) {
+        toast.error(e.message)
+      }
+    }
+
+    const nonMembers = () => {
+      if (!showDetail.value) return contacts.contacts
+      const memberIds = new Set(showDetail.value.members.map((m) => m.id))
+      return contacts.contacts.filter((c) => !memberIds.has(c.id))
+    }
+
+    return {
+      groups, contacts, showCreateForm, showDetail, confirmDeleteGroup, form,
+      ruleForm, showAddMember, selectedContactId, showRuleForm,
+      createGroup, openDetail, deleteGroup, addMember, removeMember,
+      createRule, deleteRule, nonMembers,
+    }
+  },
+  template: `
+    <div class="p-6 max-w-5xl mx-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-white">Groups</h1>
+        <button @click="showCreateForm = true" class="px-4 py-2 rounded-lg bg-mesh-600 hover:bg-mesh-500 text-white text-sm font-medium transition-colors">
+          + Create Group
+        </button>
+      </div>
+
+      <div v-if="groups.loading" class="text-gray-500 text-sm">Loading…</div>
+      <div v-else-if="!groups.groups.length" class="rounded-xl border border-dashed border-gray-700 p-12 text-center">
+        <p class="text-gray-400 mb-2">No groups yet</p>
+        <p class="text-gray-600 text-sm">Groups let you tag contacts and run automated telemetry polls.</p>
+      </div>
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          v-for="group in groups.groups"
+          :key="group.id"
+          class="bg-gray-900 border border-gray-800 rounded-xl p-5 cursor-pointer hover:border-gray-600 transition-colors"
+          @click="openDetail(group)"
+        >
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-3 h-3 rounded-full flex-shrink-0" :style="{ background: group.color }"></div>
+            <h3 class="font-semibold text-white">{{ group.name }}</h3>
+          </div>
+          <p v-if="group.description" class="text-xs text-gray-500 mb-3">{{ group.description }}</p>
+          <div class="text-xs text-gray-500">{{ group.member_count }} member{{ group.member_count !== 1 ? 's' : '' }}</div>
+        </div>
+      </div>
+
+      <!-- Create group modal -->
+      <Modal :show="showCreateForm" title="Create Group" @close="showCreateForm = false">
+        <form @submit.prevent="createGroup" class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-300 mb-1.5">Name</label>
+            <input v-model="form.name" type="text" required class="w-full px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm focus:outline-none focus:border-mesh-500" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-300 mb-1.5">Description</label>
+            <input v-model="form.description" type="text" class="w-full px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm focus:outline-none focus:border-mesh-500" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-300 mb-1.5">Color</label>
+            <input v-model="form.color" type="color" class="h-9 w-full rounded-lg bg-gray-800 border border-gray-700 cursor-pointer" />
+          </div>
+          <div class="flex justify-end gap-3">
+            <button type="button" @click="showCreateForm = false" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 text-sm hover:bg-gray-600 transition-colors">Cancel</button>
+            <button type="submit" class="px-5 py-2 rounded-lg bg-mesh-600 hover:bg-mesh-500 text-white text-sm font-medium transition-colors">Create</button>
+          </div>
+        </form>
+      </Modal>
+
+      <!-- Group detail modal -->
+      <Modal :show="!!showDetail" :title="showDetail?.name || ''" max-width="max-w-2xl" @close="showDetail = null">
+        <template v-if="showDetail">
+          <!-- Members -->
+          <div class="mb-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Members</h3>
+              <button @click="showAddMember = true" class="text-xs text-mesh-400 hover:text-mesh-300">+ Add</button>
+            </div>
+            <div v-if="!showDetail.members?.length" class="text-sm text-gray-600">No members yet</div>
+            <div v-else class="space-y-2">
+              <div v-for="m in showDetail.members" :key="m.id" class="flex items-center gap-3 bg-gray-800 rounded-lg px-3 py-2">
+                <div class="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300">
+                  {{ (m.adv_name || '?')[0].toUpperCase() }}
+                </div>
+                <span class="text-sm text-white flex-1">{{ m.adv_name || m.public_key.slice(0,12) }}</span>
+                <button @click="removeMember(m.id)" class="text-xs text-gray-500 hover:text-red-400 transition-colors">Remove</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Automations -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Automation Rules</h3>
+              <button @click="showRuleForm = true" class="text-xs text-mesh-400 hover:text-mesh-300">+ Add Rule</button>
+            </div>
+            <div v-if="!showDetail.automations?.length" class="text-sm text-gray-600">No rules configured</div>
+            <div v-else class="space-y-2">
+              <div v-for="rule in showDetail.automations" :key="rule.id" class="flex items-center gap-3 bg-gray-800 rounded-lg px-3 py-2 text-sm">
+                <span :class="['w-2 h-2 rounded-full flex-shrink-0', rule.enabled ? 'bg-green-500' : 'bg-gray-600']"></span>
+                <span class="text-white capitalize">{{ rule.rule_type }}</span>
+                <span class="text-gray-500">every {{ rule.interval_seconds >= 3600 ? (rule.interval_seconds/3600)+'h' : (rule.interval_seconds/60)+'m' }}</span>
+                <span v-if="rule.last_run" class="text-gray-600 text-xs">last: {{ new Date(rule.last_run).toLocaleTimeString() }}</span>
+                <button @click="deleteRule(rule.id)" class="ml-auto text-xs text-gray-500 hover:text-red-400">Delete</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 pt-4 border-t border-gray-800 flex justify-end">
+            <button @click="confirmDeleteGroup = showDetail; showDetail = null" class="text-xs text-red-500 hover:text-red-400 transition-colors">Delete Group</button>
+          </div>
+        </template>
+      </Modal>
+
+      <!-- Add member modal -->
+      <Modal :show="showAddMember" title="Add Member" @close="showAddMember = false">
+        <div class="space-y-3">
+          <select v-model="selectedContactId" class="w-full px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm focus:outline-none focus:border-mesh-500">
+            <option :value="null">Select a contact…</option>
+            <option v-for="c in nonMembers()" :key="c.id" :value="c.id">{{ c.adv_name || c.public_key.slice(0,12) }}</option>
+          </select>
+          <div class="flex justify-end gap-3">
+            <button @click="showAddMember = false" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 text-sm hover:bg-gray-600 transition-colors">Cancel</button>
+            <button @click="addMember" :disabled="!selectedContactId" class="px-5 py-2 rounded-lg bg-mesh-600 hover:bg-mesh-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">Add</button>
+          </div>
+        </div>
+      </Modal>
+
+      <!-- Add rule modal -->
+      <Modal :show="showRuleForm" title="Add Automation Rule" @close="showRuleForm = false">
+        <form @submit.prevent="createRule" class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-300 mb-1.5">Rule Type</label>
+            <div class="flex gap-2">
+              <button type="button" @click="ruleForm.rule_type = 'telemetry'" :class="['flex-1 py-2 rounded-lg text-sm transition-colors', ruleForm.rule_type === 'telemetry' ? 'bg-mesh-700 text-white' : 'bg-gray-800 text-gray-400']">Telemetry Poll</button>
+              <button type="button" @click="ruleForm.rule_type = 'status'" :class="['flex-1 py-2 rounded-lg text-sm transition-colors', ruleForm.rule_type === 'status' ? 'bg-mesh-700 text-white' : 'bg-gray-800 text-gray-400']">Status Poll</button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-300 mb-1.5">Interval (seconds, min 60)</label>
+            <input v-model.number="ruleForm.interval_seconds" type="number" min="60" required class="w-full px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm focus:outline-none focus:border-mesh-500" />
+          </div>
+          <div class="flex items-center gap-3">
+            <input v-model="ruleForm.enabled" type="checkbox" id="rule-enabled" class="w-4 h-4 accent-mesh-500" />
+            <label for="rule-enabled" class="text-sm text-gray-300">Enabled</label>
+          </div>
+          <div class="flex justify-end gap-3">
+            <button type="button" @click="showRuleForm = false" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 text-sm hover:bg-gray-600 transition-colors">Cancel</button>
+            <button type="submit" class="px-5 py-2 rounded-lg bg-mesh-600 hover:bg-mesh-500 text-white text-sm font-medium transition-colors">Create Rule</button>
+          </div>
+        </form>
+      </Modal>
+
+      <!-- Delete group confirm -->
+      <ConfirmDialog
+        :show="!!confirmDeleteGroup"
+        title="Delete Group"
+        :message="\`Delete '\${confirmDeleteGroup?.name}'? Members and rules will be removed.\`"
+        confirm-label="Delete"
+        :danger="true"
+        @confirm="deleteGroup"
+        @cancel="confirmDeleteGroup = null"
+      />
+    </div>
+  `,
+})
