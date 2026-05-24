@@ -81,7 +81,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function restoreSession() {
     if (!accessToken.value) return false
     try {
-      const data = await api.json('/api/auth/refresh')
+      const resp = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
+      if (!resp.ok) { setAccessToken(null); return false }
+      const data = await resp.json()
       setAccessToken(data.access_token)
       user.value = data.user
       connectSocket()

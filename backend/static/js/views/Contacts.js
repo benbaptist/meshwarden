@@ -37,87 +37,58 @@ export default defineComponent({
       return `${Math.floor(diff / 86400)}d ago`
     }
 
-    return { contacts, nodes, search, filterNodeId, filtered, TYPE_ICONS, relativeTime }
+    return { contacts, nodes, search, filterNodeId, filtered, TYPE_ICONS, TYPE_LABELS, relativeTime }
   },
   template: `
-    <div class="p-6 max-w-6xl mx-auto">
-      <div class="flex items-center justify-between mb-6">
+    <div class="h-full flex flex-col">
+      <!-- Header -->
+      <div class="px-4 pt-6 pb-2 flex items-center justify-between flex-shrink-0">
         <h1 class="text-2xl font-bold text-white">Contacts</h1>
-        <span class="text-sm text-gray-500">{{ filtered.length }} contact{{ filtered.length !== 1 ? 's' : '' }}</span>
+        <span class="text-sm text-gray-500">{{ filtered.length }}</span>
       </div>
 
       <!-- Filters -->
-      <div class="flex gap-3 mb-5">
+      <div class="px-4 pb-3 flex gap-2 flex-shrink-0">
         <input
           v-model="search"
-          type="text"
+          type="search"
           placeholder="Search by name or key…"
-          class="flex-1 px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-mesh-500 transition-colors"
+          class="flex-1 px-4 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-mesh-500 transition-colors"
         />
         <select
           v-model="filterNodeId"
-          class="px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300 focus:outline-none focus:border-mesh-500"
+          class="px-3 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-sm text-gray-300 focus:outline-none focus:border-mesh-500"
         >
           <option :value="null">All nodes</option>
           <option v-for="n in nodes.nodes" :key="n.id" :value="n.id">{{ n.name }}</option>
         </select>
       </div>
 
-      <!-- Table -->
-      <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-        <div v-if="contacts.loading" class="p-8 text-center text-gray-500 text-sm">Loading…</div>
-        <div v-else-if="!filtered.length" class="p-8 text-center text-gray-600 text-sm">No contacts found</div>
-        <table v-else class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
-              <th class="text-left px-5 py-3">Contact</th>
-              <th class="text-left px-4 py-3">Type</th>
-              <th class="text-left px-4 py-3">Last Heard</th>
-              <th class="text-left px-4 py-3">Location</th>
-              <th class="text-left px-4 py-3">Tags</th>
-              <th class="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-800">
-            <tr
-              v-for="c in filtered"
-              :key="c.id"
-              class="hover:bg-gray-800/50 transition-colors"
-            >
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 flex-shrink-0">
-                    {{ (c.adv_name || '?')[0].toUpperCase() }}
-                  </div>
-                  <div>
-                    <div class="font-medium text-white">{{ c.adv_name || '—' }}</div>
-                    <div class="text-xs text-gray-600 font-mono">{{ c.public_key.slice(0, 16) }}…</div>
-                  </div>
-                </div>
-              </td>
-              <td class="px-4 py-3">
-                <span class="text-gray-300">{{ TYPE_ICONS[c.contact_type_name] || '○' }} {{ c.contact_type_name }}</span>
-              </td>
-              <td class="px-4 py-3 text-gray-400">{{ relativeTime(c.last_advert) }}</td>
-              <td class="px-4 py-3 text-gray-400 font-mono text-xs">
-                <span v-if="c.lat && c.lon">{{ c.lat.toFixed(4) }}, {{ c.lon.toFixed(4) }}</span>
-                <span v-else>—</span>
-              </td>
-              <td class="px-4 py-3">
-                <span
-                  v-for="tag in c.tags"
-                  :key="tag"
-                  class="inline-block mr-1 px-2 py-0.5 rounded-full text-xs bg-gray-700 text-gray-300"
-                >{{ tag }}</span>
-              </td>
-              <td class="px-4 py-3 text-right">
-                <router-link :to="\`/contacts/\${c.id}\`" class="flex items-center gap-1 text-mesh-400 hover:text-mesh-300 text-xs transition-colors">
-                  View <Icon name="arrow-right" :size="12" />
-                </router-link>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- List -->
+      <div class="flex-1 overflow-y-auto">
+        <div v-if="contacts.loading" class="py-16 text-center text-gray-600 text-sm">Loading…</div>
+        <div v-else-if="!filtered.length" class="py-16 text-center text-gray-600 text-sm">No contacts found</div>
+        <router-link
+          v-else
+          v-for="c in filtered"
+          :key="c.id"
+          :to="\`/contacts/\${c.id}\`"
+          class="flex items-center gap-3.5 px-4 py-4 border-b border-gray-800/60 hover:bg-gray-900/50 active:bg-gray-900 transition-colors"
+        >
+          <div class="w-11 h-11 rounded-full bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-200 flex-shrink-0">
+            {{ (c.adv_name || '?')[0].toUpperCase() }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-white truncate">{{ c.adv_name || '—' }}</div>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <Icon :name="TYPE_ICONS[c.contact_type_name] || 'user'" :size="11" class="text-gray-500 flex-shrink-0" />
+              <span class="text-xs text-gray-500">{{ TYPE_LABELS[c.contact_type_name] || c.contact_type_name }}</span>
+              <span class="text-gray-700">·</span>
+              <span class="text-xs text-gray-600 flex-shrink-0">{{ relativeTime(c.last_advert) }}</span>
+            </div>
+          </div>
+          <Icon name="arrow-right" :size="16" class="text-gray-700 flex-shrink-0" />
+        </router-link>
       </div>
     </div>
   `,

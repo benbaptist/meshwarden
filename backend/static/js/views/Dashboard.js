@@ -43,88 +43,93 @@ export default defineComponent({
     return { nodes, contacts, recentMessages, recentContacts, relativeTime }
   },
   template: `
-    <div class="p-6 max-w-7xl mx-auto">
+    <div class="px-4 pt-6 pb-4 max-w-3xl mx-auto">
       <h1 class="text-2xl font-bold text-white mb-6">Dashboard</h1>
 
       <!-- Node cards -->
-      <section class="mb-8">
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Nodes</h2>
-        <div v-if="nodes.loading" class="text-gray-500 text-sm">Loading…</div>
-        <div v-else-if="!nodes.nodes.length" class="rounded-xl border border-dashed border-gray-700 p-8 text-center">
-          <p class="text-gray-500 mb-3">No nodes configured yet.</p>
-          <router-link to="/nodes" class="text-mesh-400 hover:text-mesh-300 text-sm">Add a node →</router-link>
+      <section class="mb-6">
+        <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-0.5">Nodes</h2>
+        <div v-if="nodes.loading" class="text-gray-600 text-sm py-4">Loading…</div>
+        <div v-else-if="!nodes.nodes.length" class="rounded-2xl border border-dashed border-gray-800 p-8 text-center">
+          <p class="text-gray-500 mb-3 text-sm">No nodes configured yet.</p>
+          <router-link to="/nodes" class="text-mesh-400 hover:text-mesh-300 text-sm flex items-center justify-center gap-1">
+            Add a node <Icon name="arrow-right" :size="13" />
+          </router-link>
         </div>
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-else class="space-y-2.5">
           <router-link
             v-for="node in nodes.nodes"
             :key="node.id"
             :to="\`/nodes/\${node.id}\`"
-            class="block bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-600 transition-colors"
+            class="flex items-center gap-3.5 px-4 py-4 rounded-2xl bg-gray-900 border border-gray-800 hover:border-gray-700 active:bg-gray-800 transition-colors"
           >
-            <div class="flex items-start justify-between mb-3">
-              <div>
-                <div class="font-semibold text-white">{{ node.name }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">
-                  {{ node.connection_type === 'tcp' ? node.host + ':' + node.port : node.device_path }}
-                </div>
+            <div :class="['w-2.5 h-2.5 rounded-full flex-shrink-0', node.connected ? 'bg-green-500 shadow-[0_0_6px_2px_rgba(34,197,94,0.35)]' : 'bg-gray-600']"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-white truncate">{{ node.name }}</div>
+              <div class="text-xs text-gray-500 mt-0.5 truncate">
+                {{ node.connection_type === 'tcp' ? node.host + ':' + node.port : node.device_path }}
               </div>
-              <span :class="['w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0', node.connected ? 'bg-green-500' : 'bg-gray-600']"></span>
             </div>
-            <div class="flex items-center gap-4 text-xs text-gray-500">
-              <span>{{ node.connected ? 'Online' : 'Offline' }}</span>
-              <span v-if="node.last_seen">Last seen {{ relativeTime(node.last_seen) }}</span>
-            </div>
+            <span :class="['text-xs font-medium flex-shrink-0', node.connected ? 'text-green-500' : 'text-gray-600']">
+              {{ node.connected ? 'Online' : 'Offline' }}
+            </span>
+            <Icon name="arrow-right" :size="14" class="text-gray-700 flex-shrink-0" />
           </router-link>
         </div>
       </section>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Recent messages -->
-        <section>
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Recent Messages</h2>
-            <router-link to="/chat" class="text-xs text-mesh-400 hover:text-mesh-300">View all →</router-link>
-          </div>
-          <div class="bg-gray-900 rounded-xl border border-gray-800 divide-y divide-gray-800">
-            <div v-if="!recentMessages.length" class="p-6 text-center text-gray-600 text-sm">No messages yet</div>
-            <div v-for="msg in recentMessages" :key="msg.id" class="px-4 py-3 flex items-start gap-3">
-              <span :class="['flex-shrink-0 mt-0.5', msg.msg_type === 'channel' ? 'text-purple-400' : 'text-mesh-500']"><Icon :name="'chat'" :size="16" /></span>
-              <div class="min-w-0 flex-1">
-                <div class="text-sm text-gray-200 truncate">{{ msg.text }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">{{ relativeTime(msg.timestamp) }}</div>
-              </div>
-              <span :class="['text-xs px-1.5 py-0.5 rounded flex-shrink-0', msg.direction === 'in' ? 'bg-blue-900 text-blue-400' : 'bg-gray-800 text-gray-400']">
-                {{ msg.direction === 'in' ? 'RX' : 'TX' }}
-              </span>
+      <!-- Recent messages -->
+      <section class="mb-6">
+        <div class="flex items-center justify-between mb-3 px-0.5">
+          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Recent Messages</h2>
+          <router-link to="/chat" class="flex items-center gap-0.5 text-xs text-mesh-400 hover:text-mesh-300">
+            All <Icon name="arrow-right" :size="12" />
+          </router-link>
+        </div>
+        <div class="rounded-2xl bg-gray-900 border border-gray-800 overflow-hidden divide-y divide-gray-800">
+          <div v-if="!recentMessages.length" class="p-6 text-center text-gray-600 text-sm">No messages yet</div>
+          <div v-for="msg in recentMessages" :key="msg.id" class="flex items-start gap-3 px-4 py-3">
+            <span :class="['flex-shrink-0 mt-0.5', msg.direction === 'in' ? 'text-mesh-500' : 'text-gray-600']">
+              <Icon name="chat" :size="15" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm text-gray-200 truncate">{{ msg.text }}</div>
+              <div class="text-xs text-gray-600 mt-0.5">{{ relativeTime(msg.timestamp) }}</div>
             </div>
+            <span :class="['text-xs px-1.5 py-0.5 rounded flex-shrink-0 font-mono', msg.direction === 'in' ? 'bg-blue-900/60 text-blue-400' : 'bg-gray-800 text-gray-500']">
+              {{ msg.direction === 'in' ? 'RX' : 'TX' }}
+            </span>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <!-- Recently heard contacts -->
-        <section>
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Recently Heard</h2>
-            <router-link to="/contacts" class="text-xs text-mesh-400 hover:text-mesh-300">View all →</router-link>
-          </div>
-          <div class="bg-gray-900 rounded-xl border border-gray-800 divide-y divide-gray-800">
-            <div v-if="!recentContacts.length" class="p-6 text-center text-gray-600 text-sm">No contacts yet</div>
-            <router-link
-              v-for="c in recentContacts"
-              :key="c.id"
-              :to="\`/contacts/\${c.id}\`"
-              class="flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors"
-            >
-              <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 flex-shrink-0">
-                {{ (c.adv_name || '?')[0].toUpperCase() }}
-              </div>
-              <div class="min-w-0 flex-1">
-                <div class="text-sm font-medium text-white truncate">{{ c.adv_name || c.public_key.slice(0,12) }}</div>
-                <div class="text-xs text-gray-500">{{ c.contact_type_name }} &middot; {{ relativeTime(c.last_advert) }}</div>
-              </div>
-            </router-link>
-          </div>
-        </section>
-      </div>
+      <!-- Recently heard contacts -->
+      <section>
+        <div class="flex items-center justify-between mb-3 px-0.5">
+          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Recently Heard</h2>
+          <router-link to="/contacts" class="flex items-center gap-0.5 text-xs text-mesh-400 hover:text-mesh-300">
+            All <Icon name="arrow-right" :size="12" />
+          </router-link>
+        </div>
+        <div class="rounded-2xl bg-gray-900 border border-gray-800 overflow-hidden divide-y divide-gray-800">
+          <div v-if="!recentContacts.length" class="p-6 text-center text-gray-600 text-sm">No contacts yet</div>
+          <router-link
+            v-for="c in recentContacts"
+            :key="c.id"
+            :to="\`/contacts/\${c.id}\`"
+            class="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-800/50 active:bg-gray-800 transition-colors"
+          >
+            <div class="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-300 flex-shrink-0">
+              {{ (c.adv_name || '?')[0].toUpperCase() }}
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-medium text-white truncate">{{ c.adv_name || c.public_key.slice(0,12) }}</div>
+              <div class="text-xs text-gray-500">{{ c.contact_type_name }} · {{ relativeTime(c.last_advert) }}</div>
+            </div>
+            <Icon name="arrow-right" :size="14" class="text-gray-700 flex-shrink-0" />
+          </router-link>
+        </div>
+      </section>
     </div>
   `,
 })

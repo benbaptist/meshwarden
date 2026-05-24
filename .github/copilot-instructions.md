@@ -88,7 +88,8 @@ These are registered globally in `app.js` and available in every template withou
 | `<Spinner>`    | Loading indicator. |
 | `<ConfirmDialog>` | Destructive-action confirmation prompt. |
 | `<SignalBadge>` | Displays SNR/RSSI signal quality badge. |
-| `<BottomNav>`  | Mobile bottom navigation (auto-hidden on md+ breakpoints). |
+
+`<BottomNav>` is imported directly in `AppShell.js` (not globally registered). It's only used once and is part of the shell layout.
 
 **Never use emojis in the UI.** All iconography must use the `<Icon>` component (Heroicons v2 outline, MIT license). The full icon lookup table is in `components/shared/Icon.js`. If you need a new icon, add its Heroicons v2 outline path there.
 
@@ -156,6 +157,13 @@ Use `fetch('/api/...')` with `Authorization: Bearer ${auth.token}` header. The a
 - Main content has `pb-16 md:pb-0` to prevent content hiding behind the bottom nav.
 - Bottom nav uses `padding-bottom: env(safe-area-inset-bottom, 0)` for iOS safe areas.
 - Tailwind breakpoints: `sm` (640px), `md` (768px), `lg` (1024px).
+
+### View layout patterns
+- **Full-height views** (Chat, Contacts, Nodes, Groups): Use `h-full flex flex-col` as the root. The scrollable section uses `flex-1 overflow-y-auto`. The parent `<main>` has `overflow-y-auto` but the child fills it exactly with `h-full`, preventing main from scrolling.
+- **Scrolling views** (Dashboard, Settings): Use `px-4 pt-6 pb-N max-w-N mx-auto` as root. The `<main>` in AppShell scrolls the content naturally.
+- **Chat**: On mobile, shows conversation list OR thread (never both). On desktop, shows both side-by-side. The back button (`md:hidden`) in the chat header navigates to `/chat`.
+- **Lists** (Contacts, Nodes): Native-style rows with full-width tap targets (~48px min-height). No tables. Rows use `border-b border-gray-800/60` dividers and `active:bg-gray-900` for press feedback.
+- **Cards** (Nodes): Action buttons span the full card width in a grid (`grid-cols-4 divide-x`) for large touch targets.
 
 ---
 

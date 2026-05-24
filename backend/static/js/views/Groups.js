@@ -111,32 +111,36 @@ export default defineComponent({
     }
   },
   template: `
-    <div class="p-6 max-w-5xl mx-auto">
-      <div class="flex items-center justify-between mb-6">
+    <div class="h-full flex flex-col">
+      <!-- Header -->
+      <div class="px-4 pt-6 pb-4 flex items-center justify-between flex-shrink-0">
         <h1 class="text-2xl font-bold text-white">Groups</h1>
-        <button @click="showCreateForm = true" class="px-4 py-2 rounded-lg bg-mesh-600 hover:bg-mesh-500 text-white text-sm font-medium transition-colors">
-          + Create Group
+        <button @click="showCreateForm = true" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-mesh-600 hover:bg-mesh-500 text-white text-sm font-semibold transition-colors active:scale-95">
+          <Icon name="plus" :size="16" /> Create
         </button>
       </div>
 
-      <div v-if="groups.loading" class="text-gray-500 text-sm">Loading…</div>
-      <div v-else-if="!groups.groups.length" class="rounded-xl border border-dashed border-gray-700 p-12 text-center">
-        <p class="text-gray-400 mb-2">No groups yet</p>
-        <p class="text-gray-600 text-sm">Groups let you tag contacts and run automated telemetry polls.</p>
-      </div>
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div
-          v-for="group in groups.groups"
-          :key="group.id"
-          class="bg-gray-900 border border-gray-800 rounded-xl p-5 cursor-pointer hover:border-gray-600 transition-colors"
-          @click="openDetail(group)"
-        >
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-3 h-3 rounded-full flex-shrink-0" :style="{ background: group.color }"></div>
-            <h3 class="font-semibold text-white">{{ group.name }}</h3>
-          </div>
-          <p v-if="group.description" class="text-xs text-gray-500 mb-3">{{ group.description }}</p>
-          <div class="text-xs text-gray-500">{{ group.member_count }} member{{ group.member_count !== 1 ? 's' : '' }}</div>
+      <!-- List -->
+      <div class="flex-1 overflow-y-auto px-4 pb-6">
+        <div v-if="groups.loading" class="py-16 text-center text-gray-600 text-sm">Loading…</div>
+        <div v-else-if="!groups.groups.length" class="mt-4 rounded-2xl border border-dashed border-gray-800 p-12 text-center">
+          <p class="text-gray-400 mb-1 text-sm">No groups yet</p>
+          <p class="text-gray-600 text-xs">Groups let you tag contacts and run automated telemetry polls.</p>
+        </div>
+        <div v-else class="space-y-3">
+          <button
+            v-for="group in groups.groups"
+            :key="group.id"
+            class="w-full bg-gray-900 border border-gray-800 rounded-2xl px-4 py-4 flex items-center gap-3 hover:border-gray-700 active:bg-gray-800 transition-colors text-left"
+            @click="openDetail(group)"
+          >
+            <div class="w-3.5 h-3.5 rounded-full flex-shrink-0" :style="{ background: group.color }"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold text-white">{{ group.name }}</div>
+              <div class="text-xs text-gray-500 mt-0.5">{{ group.member_count }} member{{ group.member_count !== 1 ? 's' : '' }}</div>
+            </div>
+            <Icon name="arrow-right" :size="16" class="text-gray-700 flex-shrink-0" />
+          </button>
         </div>
       </div>
 

@@ -45,6 +45,11 @@ router.beforeEach(async (to) => {
     return '/setup'
   }
 
+  // Validate stored token before making routing decisions
+  if (auth.accessToken && !auth.user) {
+    await auth.restoreSession()
+  }
+
   if (auth.setupComplete && !auth.isAuthenticated && to.meta.auth) {
     return '/login'
   }

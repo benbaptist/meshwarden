@@ -70,50 +70,74 @@ export default defineComponent({
     return { nodes, showForm, editingNode, form, confirmDelete, openCreate, openEdit, save, toggleConnect, deleteNode }
   },
   template: `
-    <div class="p-6 max-w-4xl mx-auto">
-      <div class="flex items-center justify-between mb-6">
+    <div class="h-full flex flex-col">
+      <!-- Header -->
+      <div class="px-4 pt-6 pb-4 flex items-center justify-between flex-shrink-0">
         <h1 class="text-2xl font-bold text-white">Nodes</h1>
-        <button @click="openCreate" class="px-4 py-2 rounded-lg bg-mesh-600 hover:bg-mesh-500 text-white text-sm font-medium transition-colors">
-          + Add Node
+        <button @click="openCreate" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-mesh-600 hover:bg-mesh-500 text-white text-sm font-semibold transition-colors active:scale-95">
+          <Icon name="plus" :size="16" /> Add Node
         </button>
       </div>
 
-      <div v-if="nodes.loading" class="text-gray-500 text-sm">Loading…</div>
-      <div v-else-if="!nodes.nodes.length" class="rounded-xl border border-dashed border-gray-700 p-12 text-center">
-        <p class="text-gray-400 mb-2">No nodes configured</p>
-        <p class="text-gray-600 text-sm">Add a node to connect to your MeshCore device.</p>
-      </div>
+      <!-- List -->
+      <div class="flex-1 overflow-y-auto px-4 pb-6 space-y-3">
+        <div v-if="nodes.loading" class="py-16 text-center text-gray-600 text-sm">Loading…</div>
+        <div v-else-if="!nodes.nodes.length" class="mt-8 rounded-2xl border border-dashed border-gray-700 p-12 text-center">
+          <p class="text-gray-400 mb-1">No nodes configured</p>
+          <p class="text-gray-600 text-sm">Add a node to connect to your MeshCore device.</p>
+        </div>
 
-      <div v-else class="space-y-3">
         <div
           v-for="node in nodes.nodes"
           :key="node.id"
-          class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-center gap-4"
+          class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden"
         >
-          <div :class="['w-3 h-3 rounded-full flex-shrink-0', node.connected ? 'bg-green-500 shadow-lg shadow-green-900' : 'bg-gray-600']"></div>
-
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2">
-              <span class="font-semibold text-white">{{ node.name }}</span>
-              <span class="text-xs px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 uppercase">{{ node.connection_type }}</span>
+          <!-- Node info -->
+          <div class="px-4 py-4 flex items-start gap-3">
+            <div class="mt-1.5 flex-shrink-0">
+              <div :class="['w-2.5 h-2.5 rounded-full', node.connected ? 'bg-green-500 shadow-[0_0_6px_2px_rgba(34,197,94,0.4)]' : 'bg-gray-600']"></div>
             </div>
-            <div class="text-xs text-gray-500 mt-0.5 font-mono">
-              {{ node.connection_type === 'tcp' ? node.host + ':' + node.port : node.device_path }}
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-semibold text-white">{{ node.name }}</span>
+                <span class="text-xs px-1.5 py-0.5 rounded-md bg-gray-800 text-gray-500 uppercase tracking-wide">{{ node.connection_type }}</span>
+              </div>
+              <div class="text-xs text-gray-500 mt-0.5 font-mono truncate">
+                {{ node.connection_type === 'tcp' ? node.host + ':' + node.port : node.device_path }}
+              </div>
+              <div class="text-xs mt-1" :class="node.connected ? 'text-green-500' : 'text-gray-600'">
+                {{ node.connected ? 'Connected' : 'Disconnected' }}
+              </div>
             </div>
           </div>
 
-          <div class="flex items-center gap-2 flex-shrink-0">
+          <!-- Action row — full-width tap-friendly buttons -->
+          <div class="border-t border-gray-800 grid grid-cols-4 divide-x divide-gray-800">
             <button
               @click="toggleConnect(node)"
-              :class="['px-3 py-1.5 rounded-lg text-xs font-medium transition-colors', node.connected ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-mesh-900 text-mesh-400 hover:bg-mesh-800']"
+              class="py-3.5 text-xs font-semibold text-center transition-colors active:opacity-70"
+              :class="node.connected ? 'text-orange-400 hover:bg-orange-900/20' : 'text-mesh-400 hover:bg-mesh-900/20'"
             >
               {{ node.connected ? 'Disconnect' : 'Connect' }}
             </button>
-            <router-link :to="\`/nodes/\${node.id}\`" class="px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+            <router-link
+              :to="\`/nodes/\${node.id}\`"
+              class="py-3.5 text-xs text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-center flex items-center justify-center"
+            >
               Details
             </router-link>
-            <button @click="openEdit(node)" class="px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Edit</button>
-            <button @click="confirmDelete = node" class="px-3 py-1.5 rounded-lg text-xs text-red-500 hover:bg-red-900/30 transition-colors">Delete</button>
+            <button
+              @click="openEdit(node)"
+              class="py-3.5 text-xs text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              @click="confirmDelete = node"
+              class="py-3.5 text-xs text-red-500 hover:bg-red-900/20 transition-colors"
+            >
+              Delete
+            </button>
           </div>
         </div>
       </div>
@@ -129,8 +153,8 @@ export default defineComponent({
           <div>
             <label class="block text-sm text-gray-300 mb-1.5">Connection Type</label>
             <div class="flex gap-2">
-              <button type="button" @click="form.connection_type = 'tcp'" :class="['flex-1 py-2 rounded-lg text-sm transition-colors', form.connection_type === 'tcp' ? 'bg-mesh-700 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700']">TCP</button>
-              <button type="button" @click="form.connection_type = 'serial'" :class="['flex-1 py-2 rounded-lg text-sm transition-colors', form.connection_type === 'serial' ? 'bg-mesh-700 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700']">Serial / USB</button>
+              <button type="button" @click="form.connection_type = 'tcp'" :class="['flex-1 py-2.5 rounded-lg text-sm transition-colors', form.connection_type === 'tcp' ? 'bg-mesh-700 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700']">TCP</button>
+              <button type="button" @click="form.connection_type = 'serial'" :class="['flex-1 py-2.5 rounded-lg text-sm transition-colors', form.connection_type === 'serial' ? 'bg-mesh-700 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700']">Serial / USB</button>
             </div>
           </div>
 
@@ -166,8 +190,8 @@ export default defineComponent({
           </div>
 
           <div class="flex justify-end gap-3 pt-2">
-            <button type="button" @click="showForm = false" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 hover:bg-gray-600 text-sm transition-colors">Cancel</button>
-            <button type="submit" class="px-5 py-2 rounded-lg bg-mesh-600 hover:bg-mesh-500 text-white text-sm font-medium transition-colors">Save</button>
+            <button type="button" @click="showForm = false" class="px-4 py-2.5 rounded-lg bg-gray-700 text-gray-200 hover:bg-gray-600 text-sm transition-colors">Cancel</button>
+            <button type="submit" class="px-5 py-2.5 rounded-lg bg-mesh-600 hover:bg-mesh-500 text-white text-sm font-medium transition-colors">Save</button>
           </div>
         </form>
       </Modal>

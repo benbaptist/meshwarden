@@ -1,4 +1,4 @@
-import { defineComponent, onMounted } from 'vue'
+import { defineComponent, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth.js'
 import { useNodesStore } from '../../stores/nodes.js'
@@ -18,18 +18,25 @@ export default defineComponent({
     const messages = useMessagesStore()
     const router = useRouter()
 
-    onMounted(async () => {
-      await auth.checkSetup()
-      if (auth.accessToken) {
-        const ok = await auth.restoreSession()
-        if (ok) {
-          nodes.fetchAll()
-          nodes.bindSocket()
-          contacts.fetchAll()
-          contacts.bindSocket()
-          messages.bindSocket()
-        }
-      }
+    let storesInitialized = false
+    function initStores() {
+      if (storesInitialized) return
+      storesInitialized = true
+      nodes.fetchAll()
+      nodes.bindSocket()
+      contacts.fetchAll()
+      contacts.bindSocket()
+      messages.bindSocket()
+    }
+
+    // Initial load: session already restored by router guard before mount
+    onMounted(() => {
+      if (auth.isAuthenticated) initStores()
+    })
+
+    // Post-login: isAuthenticated transitions false→true after onMounted has fired
+    watch(() => auth.isAuthenticated, (val) => {
+      if (val) initStores()
     })
 
     return { auth }
