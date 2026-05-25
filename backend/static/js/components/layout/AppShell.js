@@ -50,11 +50,7 @@ export default defineComponent({
         <div class="flex flex-1 min-h-0">
           <Sidebar class="hidden md:flex" />
           <main class="flex-1 overflow-y-auto min-w-0 relative">
-            <router-view v-slot="{ Component }">
-              <transition name="fade" mode="out-in">
-                <component :is="Component" />
-              </transition>
-            </router-view>
+            <router-view />
           </main>
         </div>
 
