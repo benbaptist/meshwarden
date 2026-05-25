@@ -1,5 +1,7 @@
 # MeshWarden
 
+![Contacts List](backend/static/screenshots/contacts.png)
+
 MeshWarden is a web-based dashboard for managing [MeshCore](https://github.com/attermann/meshcore) nodes. It gives you a single place to watch your mesh network in real time — seeing who's out there, how well you're hearing them, and what they're saying — while also letting you actively manage and automate interactions with contacts across one or more nodes.
 
 MeshCore itself is a lean, efficient mesh protocol. It doesn't have opinions about how you organize your contacts or automate your network. MeshWarden layers that organization on top: you decide how to group contacts, what to poll, and how often.
