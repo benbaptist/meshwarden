@@ -1,71 +1,76 @@
 import { defineComponent, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth.js'
-import { useNodesStore } from '../../stores/nodes.js'
+import { useMessagesStore } from '../../stores/messages.js'
+import NodeSwitcher from './NodeSwitcher.js'
 
 const NAV = [
-  { path: '/',         label: 'Dashboard', icon: 'grid' },
-  { path: '/chat',     label: 'Chat',      icon: 'chat' },
-  { path: '/nodes',    label: 'Nodes',     icon: 'cpu-chip' },
-  { path: '/contacts', label: 'Contacts',  icon: 'users' },
-  { path: '/groups',   label: 'Groups',    icon: 'user-group' },
-  { path: '/settings', label: 'Settings',  icon: 'cog' },
+  { path: '/',         label: 'Map',      icon: 'map' },
+  { path: '/contacts', label: 'Contacts', icon: 'users' },
+  { path: '/settings', label: 'Settings', icon: 'cog' },
 ]
 
 export default defineComponent({
   name: 'Sidebar',
+  components: { NodeSwitcher },
   setup() {
     const route = useRoute()
     const auth = useAuthStore()
-    const nodes = useNodesStore()
+    const messages = useMessagesStore()
 
-    const connectedCount = computed(() => nodes.nodes.filter((n) => n.connected).length)
-    const totalCount = computed(() => nodes.nodes.length)
+    const totalUnread = computed(() =>
+      Object.values(messages.unreadCounts).reduce((s, n) => s + n, 0)
+    )
 
     function isActive(path) {
       if (path === '/') return route.path === '/'
       return route.path.startsWith(path)
     }
 
-    return { NAV, auth, connectedCount, totalCount, isActive }
+    return { NAV, auth, isActive, totalUnread }
   },
   template: `
-    <aside class="hidden md:flex flex-col w-56 flex-shrink-0 bg-gray-900 border-r border-gray-800 h-full">
-      <!-- Logo -->
-      <div class="px-5 py-5 border-b border-gray-800">
+    <aside
+      class="flex flex-col w-56 flex-shrink-0 h-full border-r border-white/[0.06]"
+      style="background: rgba(9,9,15,0.7); backdrop-filter: blur(20px);"
+    >
+      <!-- Logo + node switcher -->
+      <div class="px-4 py-5 border-b border-white/[0.06] space-y-3">
         <div class="flex items-center gap-2.5">
-          <span class="text-mesh-500"><Logo :size="22" /></span>
-          <span class="font-bold text-white tracking-wide text-base">MeshWarden</span>
+          <span class="text-violet-400"><Logo :size="20" /></span>
+          <span class="font-bold text-white tracking-wide text-sm">MeshWarden</span>
         </div>
-        <div class="mt-1.5 text-xs text-gray-500">
-          {{ connectedCount }}/{{ totalCount }} nodes online
-        </div>
+        <NodeSwitcher />
       </div>
 
       <!-- Nav -->
-      <nav class="flex-1 py-3 overflow-y-auto scrollbar-thin">
+      <nav class="flex-1 py-3 overflow-y-auto scrollbar-thin space-y-0.5">
         <router-link
           v-for="item in NAV"
           :key="item.path"
           :to="item.path"
           :class="[
-            'flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-colors',
+            'flex items-center gap-3 px-3 py-2.5 mx-2 rounded-xl text-sm transition-all duration-150',
             isActive(item.path)
-              ? 'bg-mesh-900/60 text-mesh-400 font-medium'
-              : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
+              ? 'bg-violet-500/15 text-violet-300 border border-violet-500/20 shadow-[0_0_12px_rgba(139,92,246,0.1)]'
+              : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] border border-transparent'
           ]"
         >
-          <Icon :name="item.icon" :size="18" />
-          {{ item.label }}
+          <Icon :name="item.icon" :size="17" />
+          <span class="flex-1">{{ item.label }}</span>
+          <span
+            v-if="item.path === '/contacts' && totalUnread > 0"
+            class="min-w-[18px] h-4.5 px-1 rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center"
+          >{{ totalUnread > 9 ? '9+' : totalUnread }}</span>
         </router-link>
       </nav>
 
       <!-- User / logout -->
-      <div class="px-4 py-4 border-t border-gray-800">
-        <div class="text-xs text-gray-500 mb-2 truncate">{{ auth.user?.username }}</div>
+      <div class="px-4 py-4 border-t border-white/[0.06]">
+        <div class="text-xs text-zinc-600 mb-2 truncate">{{ auth.user?.username }}</div>
         <button
           @click="auth.logout()"
-          class="flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors"
+          class="flex items-center gap-2 text-xs text-zinc-600 hover:text-rose-400 transition-colors"
         >
           <Icon name="logout" :size="14" />
           Sign out

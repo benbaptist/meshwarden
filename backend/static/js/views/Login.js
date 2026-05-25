@@ -30,6 +30,95 @@ export default defineComponent({
         contacts.bindSocket()
         messages.bindSocket()
         router.push('/')
+      } catch {
+        error.value = 'Invalid username or password'
+      } finally {
+        loading.value = false
+      }
+    }
+
+    return { username, password, loading, error, submit }
+  },
+  template: `
+    <div class="min-h-screen app-bg flex items-center justify-center p-4">
+      <div class="w-full max-w-sm">
+        <div class="text-center mb-8">
+          <div
+            class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
+            style="background: rgba(124,58,237,0.15); border: 1px solid rgba(139,92,246,0.3);"
+          >
+            <span class="text-violet-400"><Logo :size="28" /></span>
+          </div>
+          <h1 class="text-2xl font-bold text-white tracking-tight">MeshWarden</h1>
+          <p class="text-zinc-500 text-sm mt-1">Mesh network dashboard</p>
+        </div>
+
+        <div class="glass rounded-3xl p-7 shadow-2xl">
+          <form @submit.prevent="submit" class="space-y-4">
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1.5 font-medium">Username</label>
+              <input
+                v-model="username"
+                type="text"
+                autocomplete="username"
+                required
+                autofocus
+                class="w-full px-4 py-2.5 rounded-xl text-white placeholder-zinc-600 text-sm outline-none transition-all"
+                style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);"
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1.5 font-medium">Password</label>
+              <input
+                v-model="password"
+                type="password"
+                autocomplete="current-password"
+                required
+                class="w-full px-4 py-2.5 rounded-xl text-white placeholder-zinc-600 text-sm outline-none transition-all"
+                style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);"
+              />
+            </div>
+
+            <div v-if="error" class="text-rose-400 text-xs rounded-xl px-3 py-2.5" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);">
+              {{ error }}
+            </div>
+
+            <button
+              type="submit"
+              :disabled="loading"
+              class="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style="background: linear-gradient(135deg, #7c3aed, #9333ea);"
+            >{{ loading ? 'Signing in…' : 'Sign in' }}</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  `,
+})
+
+  setup() {
+    const auth = useAuthStore()
+    const nodes = useNodesStore()
+    const contacts = useContactsStore()
+    const messages = useMessagesStore()
+    const router = useRouter()
+
+    const username = ref('')
+    const password = ref('')
+    const loading = ref(false)
+    const error = ref('')
+
+    async function submit() {
+      error.value = ''
+      loading.value = true
+      try {
+        await auth.login(username.value, password.value)
+        await nodes.fetchAll()
+        nodes.bindSocket()
+        contacts.fetchAll()
+        contacts.bindSocket()
+        messages.bindSocket()
+        router.push('/')
       } catch (e) {
         error.value = 'Invalid username or password'
       } finally {

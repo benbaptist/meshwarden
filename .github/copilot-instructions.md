@@ -39,6 +39,7 @@ MeshWarden is a web-based dashboard for managing a MeshCore node and observing t
 - `vue-router` **must** use `.prod.js` — the dev build tries to import `@vue/devtools-api` which is stubbed.
 - `pinia` has no prod ESM build; use the default `esm-browser.js` with the devtools-api stub.
 - **Never add CDN URLs as bare specifiers** without adding them to the importmap first.
+- **Leaflet 1.9.4** and **ApexCharts 3.49.0** are loaded as global `<script>` tags (not importmap). Access as `window.L` and `window.ApexCharts`.
 
 ---
 
@@ -48,23 +49,23 @@ MeshWarden is a web-based dashboard for managing a MeshCore node and observing t
 backend/
   app/
     __init__.py          # App factory
-    models.py            # SQLAlchemy models
+    models.py            # SQLAlchemy models (DB is at backend/app/db/models.py)
     auth/                # JWT auth blueprint
     api/                 # REST API blueprints (nodes, contacts, groups, messages, etc.)
-    node_manager.py      # meshcore connection + asyncio loop management
-    event_handler.py     # meshcore event → SocketIO bridge
+    node/                # meshcore connection + asyncio loop management
+    socket/              # SocketIO event handlers
   static/
-    index.html           # SPA entry — importmap + Tailwind + global scripts
+    index.html           # SPA entry — importmap + Tailwind CDN + Leaflet + global scripts
     js/
       app.js             # Vue app bootstrap — creates app, registers globals, mounts
-      router.js          # Vue Router routes
+      router.js          # Vue Router routes (6 routes: /setup, /login, /, /contacts, /contacts/:id, /settings)
       stores/            # Pinia stores (auth, nodes, contacts, messages, groups)
       views/             # Page-level Vue components
       components/
-        layout/          # AppShell, Sidebar, BottomNav
+        layout/          # AppShell, Sidebar, BottomNav, NodeSwitcher
         shared/          # Icon, Logo, Modal, Toast, Spinner, ConfirmDialog, SignalBadge
-        contacts/        # SignalBadge, ContactDetail subcomponents
-    icons/               # SVG app icons (icon-192.svg, icon-512.svg)
+        contacts/        # SignalBadge subcomponent
+    icons/               # SVG app icons
     manifest.json        # PWA manifest
 data/                    # SQLite DB (gitignored, Docker volume)
 docker-compose.yml
@@ -81,7 +82,7 @@ These are registered globally in `app.js` and available in every template withou
 
 | Component      | Usage |
 |----------------|-------|
-| `<Icon>`       | `<Icon name="grid" :size="20" />` — Heroicons v2 outline. See `components/shared/Icon.js` for all valid `name` values. |
+| `<Icon>`       | `<Icon name="map" :size="20" />` — Heroicons v2 outline. See `components/shared/Icon.js` for all valid `name` values. |
 | `<Logo>`       | `<Logo :size="32" />` — MeshWarden hexagon logo mark. |
 | `<Modal>`      | Wrapper for overlay dialogs. |
 | `<AppToast>`   | Global toast notification outlet. |
@@ -89,9 +90,48 @@ These are registered globally in `app.js` and available in every template withou
 | `<ConfirmDialog>` | Destructive-action confirmation prompt. |
 | `<SignalBadge>` | Displays SNR/RSSI signal quality badge. |
 
-`<BottomNav>` is imported directly in `AppShell.js` (not globally registered). It's only used once and is part of the shell layout.
+`<BottomNav>` and `<NodeSwitcher>` are imported locally in `AppShell.js` and `Sidebar.js` — not globally registered.
 
 **Never use emojis in the UI.** All iconography must use the `<Icon>` component (Heroicons v2 outline, MIT license). The full icon lookup table is in `components/shared/Icon.js`. If you need a new icon, add its Heroicons v2 outline path there.
+
+---
+
+## Design System — 2026 Glassmorphic Dark Theme
+
+### Color palette (Tailwind custom `surface` scale + violet accent)
+- **Background**: `app-bg` CSS class — radial gradient (`#09090f` base, violet glow at top).
+- **Surface scale**: `surface-950: #09090f`, `surface-900: #0f0f18`, `surface-800: #17172a`, `surface-700: #1f1f35`
+- **Primary accent**: violet — `#7c3aed` → `#9333ea` gradient. Use for CTAs, active states, badges.
+- **Secondary accents**: cyan (`#22d3ee`) for connected nodes; amber (`#f59e0b`) for rooms; emerald (`#34d399`) for sensors; rose for destructive actions.
+- **Text**: `zinc-100` (primary), `zinc-400` (secondary), `zinc-600` (muted/placeholder).
+- **Borders**: `rgba(255,255,255,0.06)` to `rgba(255,255,255,0.1)` — never solid gray.
+
+### Glass utility
+The `.glass` CSS class (defined in `index.html`):
+```css
+background: rgba(255,255,255,0.04);
+backdrop-filter: blur(20px);
+border: 1px solid rgba(255,255,255,0.08);
+```
+Use on cards, panels, dropdowns — anything that floats over the background.
+
+### Input fields
+```html
+<input
+  class="w-full px-3.5 py-2.5 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none"
+  style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);"
+/>
+```
+
+### Primary button
+```html
+<button style="background: linear-gradient(135deg, #7c3aed, #9333ea);" class="rounded-xl text-white font-semibold">
+```
+
+### Active nav state (sidebar)
+```
+bg-violet-500/15 text-violet-300 border border-violet-500/20 shadow-[0_0_12px_rgba(139,92,246,0.1)]
+```
 
 ---
 
@@ -152,18 +192,33 @@ Use `fetch('/api/...')` with `Authorization: Bearer ${auth.token}` header. The a
 
 ## Responsive / Mobile Layout
 
-- **Desktop** (md+): Sidebar navigation on the left, full content area.
-- **Mobile** (<md): Sidebar is hidden (`hidden md:flex`). Fixed bottom `<BottomNav>` provides navigation.
-- Main content has `pb-16 md:pb-0` to prevent content hiding behind the bottom nav.
-- Bottom nav uses `padding-bottom: env(safe-area-inset-bottom, 0)` for iOS safe areas.
-- Tailwind breakpoints: `sm` (640px), `md` (768px), `lg` (1024px).
+The app uses a **mobile-first flexbox column** layout (no fixed positioning for the main shell):
+
+```
+<div class="h-full flex flex-col">        ← AppShell root
+  <header class="md:hidden ...">           ← Mobile header (logo + NodeSwitcher compact), h-12
+  <div class="flex flex-1 min-h-0">        ← Content row
+    <Sidebar class="hidden md:flex" />      ← Desktop sidebar, w-56
+    <main class="flex-1 overflow-y-auto">  ← Main content
+  </div>
+  <BottomNav class="md:hidden" />          ← Mobile bottom nav
+</div>
+```
+
+- **Mobile** (<md): header + main + bottom nav stacked vertically. No sidebar.
+- **Desktop** (md+): sidebar left + main right. No header or bottom nav.
+- Bottom nav: `padding-bottom: env(safe-area-inset-bottom, 0)` for iOS safe areas.
+
+### Navigation structure
+3 tabs: **Map** (`/`), **Contacts** (`/contacts`), **Settings** (`/settings`).
+Node management lives inside Settings. No separate Nodes, Chat, Groups, or Dashboard routes.
 
 ### View layout patterns
-- **Full-height views** (Chat, Contacts, Nodes, Groups): Use `h-full flex flex-col` as the root. The scrollable section uses `flex-1 overflow-y-auto`. The parent `<main>` has `overflow-y-auto` but the child fills it exactly with `h-full`, preventing main from scrolling.
-- **Scrolling views** (Dashboard, Settings): Use `px-4 pt-6 pb-N max-w-N mx-auto` as root. The `<main>` in AppShell scrolls the content naturally.
-- **Chat**: On mobile, shows conversation list OR thread (never both). On desktop, shows both side-by-side. The back button (`md:hidden`) in the chat header navigates to `/chat`.
-- **Lists** (Contacts, Nodes): Native-style rows with full-width tap targets (~48px min-height). No tables. Rows use `border-b border-gray-800/60` dividers and `active:bg-gray-900` for press feedback.
-- **Cards** (Nodes): Action buttons span the full card width in a grid (`grid-cols-4 divide-x`) for large touch targets.
+- **Full-height views** (Map, Contacts, ContactDetail): `h-full flex flex-col` root. Scrollable section uses `flex-1 overflow-y-auto`. Map uses `h-full relative` with Leaflet filling `absolute inset-0`.
+- **Scrolling views** (Settings): `px-4 pt-6 pb-20 max-w-xl mx-auto` root. Main scrolls naturally.
+- **ContactDetail (mobile tabs)**: Chat (default) / Info / Activity. Desktop: Info panel (fixed 288px left) + Chat (flex-1 right) always visible side by side.
+- **Tab visibility pattern**: `:class="activeTab !== 'chat' ? 'hidden md:flex' : 'flex'"` — `md:flex` overrides `hidden` at ≥768px.
+- **Lists** (Contacts): native-style rows, full-width tap targets (min-h `56px`). `border-b border-white/[0.04]` dividers. `active:bg-white/[0.04]` press feedback. No tables.
 
 ---
 
