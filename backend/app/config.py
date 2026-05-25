@@ -19,6 +19,7 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    ALLOWED_ORIGINS = '*'
 
 
 class ProductionConfig(Config):
