@@ -11,6 +11,7 @@ import ConfirmDialog from './components/shared/ConfirmDialog.js'
 import SignalBadge from './components/contacts/SignalBadge.js'
 import Icon from './components/shared/Icon.js'
 import Logo from './components/shared/Logo.js'
+import ChatPanel from './components/shared/ChatPanel.js'
 
 const app = createApp(AppShell)
 const pinia = createPinia()
@@ -26,6 +27,7 @@ app.component('ConfirmDialog', ConfirmDialog)
 app.component('SignalBadge', SignalBadge)
 app.component('Icon', Icon)
 app.component('Logo', Logo)
+app.component('ChatPanel', ChatPanel)
 
 app.mount('#app')
 

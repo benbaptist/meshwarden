@@ -1,4 +1,5 @@
-import { defineComponent, ref, computed, onMounted } from 'vue'
+import { defineComponent, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useNodesStore } from '../stores/nodes.js'
 import { useMessagesStore } from '../stores/messages.js'
 import api from '../api.js'
@@ -6,6 +7,7 @@ import api from '../api.js'
 export default defineComponent({
   name: 'Channels',
   setup() {
+    const router = useRouter()
     const nodes = useNodesStore()
     const messages = useMessagesStore()
 
@@ -65,7 +67,7 @@ export default defineComponent({
 
     onMounted(load)
 
-    return { channels, loading, error, displayName, unread, lastMessage, fmtTime, nodes }
+    return { channels, loading, error, displayName, unread, lastMessage, fmtTime, nodes, router }
   },
   template: `
     <div class="h-full flex flex-col">
@@ -106,7 +108,8 @@ export default defineComponent({
           <li
             v-for="ch in channels"
             :key="ch.channel_idx"
-            class="flex items-center gap-3 px-4 min-h-[56px] border-b border-white/[0.04]"
+            @click="router.push('/channels/' + ch.channel_idx)"
+            class="flex items-center gap-3 px-4 min-h-[56px] border-b border-white/[0.04] cursor-pointer active:bg-white/[0.04] transition-colors hover:bg-white/[0.03]"
           >
             <!-- Index badge -->
             <div
@@ -145,6 +148,7 @@ export default defineComponent({
               >{{ unread(ch) > 9 ? '9+' : unread(ch) }}</span>
             </div>
 
+            <Icon name="chevron-right" :size="14" class="text-zinc-700 flex-shrink-0" />
           </li>
         </ul>
       </div>

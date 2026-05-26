@@ -8,6 +8,7 @@ const MapView       = () => import('./views/Map.js')
 const Contacts      = () => import('./views/Contacts.js')
 const ContactDetail = () => import('./views/ContactDetail.js')
 const Channels      = () => import('./views/Channels.js')
+const ChannelDetail = () => import('./views/ChannelDetail.js')
 const Settings      = () => import('./views/Settings.js')
 
 const routes = [
@@ -17,6 +18,7 @@ const routes = [
   { path: '/contacts',           component: Contacts,       meta: { auth: true } },
   { path: '/contacts/:id',       component: ContactDetail,  meta: { auth: true } },
   { path: '/channels',           component: Channels,       meta: { auth: true } },
+  { path: '/channels/:idx',      component: ChannelDetail,  meta: { auth: true } },
   { path: '/settings',           component: Settings,       meta: { auth: true } },
   { path: '/:pathMatch(.*)*',    redirect: '/' },
 ]
