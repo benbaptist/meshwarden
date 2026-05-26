@@ -62,3 +62,9 @@ devices:
 ## License
 
 MIT
+
+## Notice of Sloppy Slops
+
+This project is pretty much entirely vibe-coded. It's one of the rare times I ever do it, but it's fun to check in every now and then and see what the current state of LLMs is at and how in/competent it is. As of writing this, I've done this mostly with Claude Sonnet 4.6 set to High on Github Copilot. 
+
+Pretty impressive stuff. That being said, despite not looking at code by hand, I have been pretty stern with HOW some portions of the code should be written, what libraries and languages to use, and extra emphasis on security (to the point that it had a little concept creep and kept emphasizing security functionality in places where it made little sense, like in the README and in parts of the UI; I've since stripped this out).
