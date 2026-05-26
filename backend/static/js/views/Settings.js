@@ -206,7 +206,7 @@ export default defineComponent({
     </div>
 
     <!-- Node add/edit modal -->
-    <Modal v-if="showModal" @close="closeModal">
+    <Modal v-if="showModal" :show="true" @close="closeModal">
       <div class="p-6 w-full max-w-md">
         <h2 class="text-base font-bold text-white mb-5">{{ editingNode ? 'Edit Node' : 'Add Node' }}</h2>
         <form @submit.prevent="saveNode" class="space-y-3">
@@ -262,6 +262,7 @@ export default defineComponent({
     <!-- Delete confirmation -->
     <ConfirmDialog
       v-if="confirmDelete"
+      :show="true"
       :title="\`Delete \${confirmDelete.name}?\`"
       message="This will permanently remove the node and all its data. This cannot be undone."
       confirm-label="Delete"
