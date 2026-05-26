@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from ..auth.utils import require_auth
-from ..db.models import Contact, ContactHistory, Group, GroupMembership, Message, TelemetryRecord
+from ..db.models import Contact, ContactHistory, Group, GroupMembership, Message, PingRecord, TelemetryRecord
 from ..extensions import db
 from ..node.manager import node_manager
 
@@ -172,9 +172,27 @@ def _build_contact_dict(contact):
     }
 
 
+@contacts_bp.get('/<int:contact_id>/pings')
+@require_auth
+def contact_pings(contact_id: int):
+    contact = db.session.get(Contact, contact_id)
+    if not contact:
+        return jsonify({'error': 'Contact not found'}), 404
+    rows = db.session.execute(
+        db.select(PingRecord)
+        .filter_by(contact_id=contact_id)
+        .order_by(PingRecord.sent_at.desc())
+        .limit(_PAGE_SIZE)
+    ).scalars().all()
+    return jsonify([r.to_dict() for r in rows])
+
+
 @contacts_bp.post('/<int:contact_id>/ping')
 @require_auth
 def ping_contact(contact_id: int):
+    import threading
+    import time
+
     contact = db.session.get(Contact, contact_id)
     if not contact:
         return jsonify({'error': 'Contact not found'}), 404
@@ -183,13 +201,34 @@ def ping_contact(contact_id: int):
     if not conn or not conn.is_connected:
         return jsonify({'error': 'Node not connected'}), 503
 
+    event = threading.Event()
+    result: dict = {}
+    sent_at = time.monotonic()
+    waiter = {'event': event, 'result': result, 'sent_at': sent_at}
+    node_manager.set_pending_ping(contact.node_id, contact_id, waiter)
+
     try:
         node_manager.run_async(
             conn.mc.commands.req_status(_build_contact_dict(contact), timeout=0), timeout=5
         )
-        return jsonify({'ok': True})
     except Exception as e:
+        node_manager.clear_pending_ping(contact.node_id, contact_id)
         return jsonify({'error': str(e)}), 500
+
+    success = event.wait(timeout=2.0)
+    node_manager.clear_pending_ping(contact.node_id, contact_id)
+
+    latency_ms = result.get('latency_ms') if success else None
+    record = PingRecord(
+        node_id=contact.node_id,
+        contact_id=contact_id,
+        success=success,
+        latency_ms=latency_ms,
+    )
+    db.session.add(record)
+    db.session.commit()
+
+    return jsonify({'success': success, 'latency_ms': latency_ms, 'id': record.id})
 
 
 @contacts_bp.post('/<int:contact_id>/reset_path')

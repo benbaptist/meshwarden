@@ -18,6 +18,7 @@ class NodeManager:
         self._thread: Optional[threading.Thread] = None
         self._connections: dict[int, object] = {}  # node_id → NodeConnection
         self._app = None
+        self._pending_pings: dict[tuple, dict] = {}  # (node_id, contact_id) → waiter
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -108,6 +109,15 @@ class NodeManager:
     def call(self, node_id: int, coro, timeout: float = 30):
         """Run an arbitrary meshcore coroutine for a given node."""
         return self.run_async(coro, timeout=timeout)
+
+    def set_pending_ping(self, node_id: int, contact_id: int, waiter: dict) -> None:
+        self._pending_pings[(node_id, contact_id)] = waiter
+
+    def get_pending_ping(self, node_id: int, contact_id: int):
+        return self._pending_pings.get((node_id, contact_id))
+
+    def clear_pending_ping(self, node_id: int, contact_id: int) -> None:
+        self._pending_pings.pop((node_id, contact_id), None)
 
 
 node_manager = NodeManager()

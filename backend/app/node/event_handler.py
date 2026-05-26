@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from datetime import datetime, timezone
 
 from meshcore import EventType
@@ -257,6 +258,7 @@ class EventHandler:
 
     def _on_status(self, event, db, socketio) -> None:
         from ..db.models import Contact
+        from ..node.manager import node_manager
         p = event.payload
         contact_id = None
         pubkey_prefix = p.get('pubkey_prefix') or p.get('pubkey_pre', '')
@@ -269,6 +271,12 @@ class EventHandler:
             ).scalar_one_or_none()
             if contact:
                 contact_id = contact.id
+        if contact_id:
+            waiter = node_manager.get_pending_ping(self.node_id, contact_id)
+            if waiter:
+                latency_ms = round((time.monotonic() - waiter['sent_at']) * 1000)
+                waiter['result']['latency_ms'] = latency_ms
+                waiter['event'].set()
         socketio.emit('node:status', {
             'node_id': self.node_id,
             'contact_id': contact_id,

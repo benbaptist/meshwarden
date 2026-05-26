@@ -54,6 +54,10 @@ export const useContactsStore = defineStore('contacts', () => {
     return api.json(`/api/contacts/${id}/telemetry_req`, { method: 'POST' })
   }
 
+  async function fetchPings(id, page = 1) {
+    return api.json(`/api/contacts/${id}/pings?page=${page}`)
+  }
+
   async function toggleFavorite(id) {
     const contact = contacts.value.find((c) => c.id === id)
     const updated = await update(id, { favorite: !contact?.favorite })
@@ -111,7 +115,7 @@ export const useContactsStore = defineStore('contacts', () => {
   return {
     contacts, loading,
     fetchAll, fetchOne, update, fetchHistory, fetchTelemetry,
-    fetchMessages, fetchSignal, requestTelemetry,
+    fetchMessages, fetchSignal, requestTelemetry, fetchPings,
     toggleFavorite, ping, resetPath, setPath, loginContact,
     bindSocket,
   }

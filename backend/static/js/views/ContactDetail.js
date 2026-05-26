@@ -44,6 +44,8 @@ export default defineComponent({
     const threadRef = ref(null)
     const newTag = ref('')
     const pinging = ref(false)
+    const pingResult = ref(null)  // null | { success, latency_ms }
+    const pings = ref([])
     const adminPassword = ref('')
     const adminLoggingIn = ref(false)
     const loggedIn = ref(false)
@@ -84,6 +86,7 @@ export default defineComponent({
         const fetches = [
           contacts.fetchHistory(contactId).then((d) => { history.value = d }),
           contacts.fetchSignal(contactId).then((d) => { signal.value = d }),
+          contacts.fetchPings(contactId).then((d) => { pings.value = d }),
           messages.fetchThread(threadKey, { contact_id: contactId, msg_type: 'direct' }),
         ]
         if (contact.value?.contact_type_name === 'REP' || contact.value?.contact_type_name === 'SENS') {
@@ -149,11 +152,13 @@ export default defineComponent({
     async function ping() {
       if (pinging.value) return
       pinging.value = true
+      pingResult.value = null
       try {
-        await contacts.ping(contactId)
-        toast.info('Ping sent')
-      } catch (e) {
-        toast.error(e.message || 'Ping failed')
+        const res = await contacts.ping(contactId)
+        pingResult.value = { success: res.success, latency_ms: res.latency_ms }
+        pings.value = [res, ...pings.value].slice(0, 50)
+      } catch {
+        pingResult.value = { success: false, latency_ms: null }
       } finally {
         pinging.value = false
       }
@@ -253,9 +258,9 @@ export default defineComponent({
     onBeforeUnmount(() => { if (signalChart) signalChart.destroy() })
 
     return {
-      contact, history, signal, telemetry, thread, sortedThread,
+      contact, history, signal, telemetry, pings, thread, sortedThread,
       activeTab, text, sending, threadRef, newTag,
-      pinging, adminPassword, adminLoggingIn, loggedIn, newPath, settingPath,
+      pinging, pingResult, adminPassword, adminLoggingIn, loggedIn, newPath, settingPath,
       isRepeater, isSensor, pathHops,
       send, onKeydown, addTag, removeTag, toggleFavorite,
       ping, doResetPath, doSetPath, doLogin, doRequestTelemetry,
@@ -292,13 +297,18 @@ export default defineComponent({
 
           <!-- Action buttons -->
           <div class="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              v-if="isRepeater"
-              @click="ping"
-              :disabled="pinging"
-              title="Ping (zero hop)"
-              class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40"
-            ><Icon name="signal" :size="17" /></button>
+            <template v-if="isRepeater">
+              <button
+                @click="ping"
+                :disabled="pinging"
+                title="Ping (zero hop)"
+                class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40"
+              ><Icon name="signal" :size="17" /></button>
+              <span
+                v-if="pingResult !== null"
+                :class="['text-xs font-mono tabular-nums', pingResult.success ? 'text-cyan-300' : 'text-rose-400']"
+              >{{ pingResult.success ? pingResult.latency_ms + 'ms' : 'timeout' }}</span>
+            </template>
             <button
               @click="toggleFavorite"
               :class="['w-8 h-8 flex items-center justify-center rounded-lg transition-colors', contact.favorite ? 'text-amber-400' : 'text-zinc-600 hover:text-amber-500']"
@@ -515,6 +525,23 @@ export default defineComponent({
                 </div>
               </div>
             </template>
+
+            <!-- Ping history -->
+            <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mt-4 mb-1">Ping History</div>
+            <div v-if="!pings.length" class="text-sm text-zinc-600 py-2 text-center">No pings recorded.</div>
+            <div v-else class="space-y-1">
+              <div
+                v-for="p in pings"
+                :key="p.id"
+                class="flex items-center justify-between text-xs py-1.5 px-3 rounded-lg"
+                style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);"
+              >
+                <span class="text-zinc-600">{{ new Date(p.sent_at).toLocaleString() }}</span>
+                <span :class="p.success ? 'text-cyan-300 font-mono' : 'text-rose-400'">
+                  {{ p.success ? p.latency_ms + 'ms' : 'timeout' }}
+                </span>
+              </div>
+            </div>
 
             <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mt-4 mb-1">Change History</div>
             <div v-if="!history.length" class="text-sm text-zinc-600 py-4 text-center">No changes recorded.</div>

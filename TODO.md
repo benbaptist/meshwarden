@@ -31,3 +31,4 @@
 
 - Bug fix/feature: loading screen if tab takes longer than 0.5sec to display, error screens if failure
 - Remove pointless "session" section on settings page
+- 

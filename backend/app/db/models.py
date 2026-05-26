@@ -138,6 +138,9 @@ class Contact(db.Model):
     telemetry: Mapped[list[TelemetryRecord]] = relationship(
         'TelemetryRecord', back_populates='contact'
     )
+    pings: Mapped[list[PingRecord]] = relationship(
+        'PingRecord', back_populates='contact', cascade='all, delete-orphan'
+    )
     group_memberships: Mapped[list[GroupMembership]] = relationship(
         'GroupMembership', back_populates='contact', cascade='all, delete-orphan'
     )
@@ -258,6 +261,7 @@ class TelemetryRecord(db.Model):
     contact: Mapped[Contact | None] = relationship('Contact', back_populates='telemetry')
 
     def get_lpp(self) -> dict:
+
         try:
             return json.loads(self.lpp_data)
         except (json.JSONDecodeError, TypeError):
@@ -273,6 +277,33 @@ class TelemetryRecord(db.Model):
             'contact_id': self.contact_id,
             'timestamp': self.timestamp.isoformat(),
             'lpp_data': self.get_lpp(),
+        }
+
+
+# ---------------------------------------------------------------------------
+# Pings
+# ---------------------------------------------------------------------------
+
+class PingRecord(db.Model):
+    __tablename__ = 'ping_records'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    node_id: Mapped[int] = mapped_column(ForeignKey('nodes.id'), nullable=False)
+    contact_id: Mapped[int] = mapped_column(ForeignKey('contacts.id'), nullable=False)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    success: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    node: Mapped[Node] = relationship('Node')
+    contact: Mapped[Contact] = relationship('Contact', back_populates='pings')
+
+    def to_dict(self) -> dict:
+        return {
+            'id': self.id,
+            'contact_id': self.contact_id,
+            'sent_at': self.sent_at.isoformat(),
+            'success': self.success,
+            'latency_ms': self.latency_ms,
         }
 
 
