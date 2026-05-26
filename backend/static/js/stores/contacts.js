@@ -51,8 +51,12 @@ export const useContactsStore = defineStore('contacts', () => {
     return api.json(`/api/contacts/${id}/signal`)
   }
 
-  async function requestTelemetry(id) {
-    return api.json(`/api/contacts/${id}/telemetry_req`, { method: 'POST' })
+  async function requestTelemetry(id, password = '') {
+    const body = password ? { password } : {}
+    return api.json(`/api/contacts/${id}/telemetry_req`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
   }
 
   async function fetchPings(id, page = 1) {
@@ -97,6 +101,25 @@ export const useContactsStore = defineStore('contacts', () => {
     })
   }
 
+  async function logoutContact(id) {
+    return api.json(`/api/contacts/${id}/logout`, { method: 'POST' })
+  }
+
+  async function requestAdminStatus(id) {
+    return api.json(`/api/contacts/${id}/admin/status`, { method: 'POST' })
+  }
+
+  async function requestAdminAcl(id) {
+    return api.json(`/api/contacts/${id}/admin/acl`, { method: 'POST' })
+  }
+
+  async function sendAdminCmd(id, cmd) {
+    return api.json(`/api/contacts/${id}/admin/cmd`, {
+      method: 'POST',
+      body: JSON.stringify({ cmd }),
+    })
+  }
+
   async function fetchContactGroups(id) {
     return api.json(`/api/contacts/${id}/groups`)
   }
@@ -121,7 +144,8 @@ export const useContactsStore = defineStore('contacts', () => {
     contacts, loading, activeGroupId,
     fetchAll, fetchOne, update, fetchHistory, fetchTelemetry,
     fetchMessages, fetchSignal, requestTelemetry, fetchPings,
-    toggleFavorite, ping, resetPath, setPath, loginContact, fetchContactGroups,
-    bindSocket,
+    toggleFavorite, ping, resetPath, setPath, loginContact, logoutContact,
+    requestAdminStatus, requestAdminAcl, sendAdminCmd,
+    fetchContactGroups, bindSocket,
   }
 })

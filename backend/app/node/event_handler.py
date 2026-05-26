@@ -47,6 +47,7 @@ class EventHandler:
             EventType.NEW_CONTACT: self._on_new_contact,
             EventType.TELEMETRY_RESPONSE: self._on_telemetry,
             EventType.STATUS_RESPONSE: self._on_status,
+            EventType.ACL_RESPONSE: self._on_acl_response,
             EventType.PATH_UPDATE: self._on_path_update,
             EventType.CONNECTED: self._on_connected,
             EventType.DISCONNECTED: self._on_disconnected,
@@ -281,6 +282,26 @@ class EventHandler:
             'node_id': self.node_id,
             'contact_id': contact_id,
             'status': p,
+        })
+
+    def _on_acl_response(self, event, db, socketio) -> None:
+        from ..db.models import Contact
+        p = event.payload
+        contact_id = None
+        pubkey_pre = p.get('pubkey_pre', '') or p.get('pubkey_prefix', '')
+        if pubkey_pre:
+            contact = db.session.execute(
+                db.select(Contact).filter(
+                    Contact.node_id == self.node_id,
+                    Contact.public_key.like(pubkey_pre + '%'),
+                )
+            ).scalar_one_or_none()
+            if contact:
+                contact_id = contact.id
+        socketio.emit('admin:acl', {
+            'node_id': self.node_id,
+            'contact_id': contact_id,
+            'data': p,
         })
 
     def _on_path_update(self, event, db, socketio) -> None:

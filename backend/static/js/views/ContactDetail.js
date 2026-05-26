@@ -5,6 +5,7 @@ import { useMessagesStore } from '../stores/messages.js'
 import { useNodesStore } from '../stores/nodes.js'
 import { useGroupsStore } from '../stores/groups.js'
 import { useToast } from '../components/shared/Toast.js'
+import { getSocket } from '../socket.js'
 
 const TYPE_META = {
   CLI:  { label: 'Client',   cls: 'bg-violet-500/15 border-violet-500/20 text-violet-300' },
@@ -18,9 +19,88 @@ const GRADIENTS = [
   ['#7c3aed', '#4f46e5'], ['#0e7490', '#0891b2'], ['#d97706', '#b45309'],
   ['#059669', '#047857'], ['#be185d', '#9d174d'], ['#6d28d9', '#7c3aed'],
 ]
+
 function nameHash(name) {
   let h = 0; for (const c of (name || '?')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h
 }
+
+function fmtUptime(s) {
+  if (s === null || s === undefined) return '—'
+  const d = Math.floor(s / 86400)
+  const h = Math.floor((s % 86400) / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  if (d > 0) return `${d}d ${h}h ${m}m`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m ${s % 60}s`
+}
+
+const TELEMETRY_FIELD_META = {
+  temperature:    { label: 'Temperature',    unit: '\u00b0C',  fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
+  temp:           { label: 'Temperature',    unit: '\u00b0C',  fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
+  humidity:       { label: 'Humidity',       unit: '%',   fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
+  pressure:       { label: 'Pressure',       unit: 'hPa', fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
+  voltage:        { label: 'Voltage',        unit: 'V',   fmt: (v) => typeof v === 'number' ? v.toFixed(2) : v },
+  battery_v:      { label: 'Battery',        unit: 'V',   fmt: (v) => typeof v === 'number' ? v.toFixed(2) : v },
+  battery:        { label: 'Battery',        unit: '%',   fmt: (v) => typeof v === 'number' ? Math.round(v) : v },
+  altitude:       { label: 'Altitude',       unit: 'm',   fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
+  latitude:       { label: 'Latitude',       unit: '\u00b0',   fmt: (v) => typeof v === 'number' ? v.toFixed(5) : v },
+  longitude:      { label: 'Longitude',      unit: '\u00b0',   fmt: (v) => typeof v === 'number' ? v.toFixed(5) : v },
+  uptime:         { label: 'Uptime',         unit: '',    fmt: fmtUptime },
+  uptime_secs:    { label: 'Uptime',         unit: '',    fmt: fmtUptime },
+  rssi:           { label: 'RSSI',           unit: 'dBm', fmt: (v) => v },
+  snr:            { label: 'SNR',            unit: 'dB',  fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
+  tx_power:       { label: 'TX Power',       unit: 'dBm', fmt: (v) => v },
+  luminosity:     { label: 'Luminosity',     unit: 'lux', fmt: (v) => v },
+  power:          { label: 'Power',          unit: 'W',   fmt: (v) => typeof v === 'number' ? v.toFixed(2) : v },
+  noise_floor:    { label: 'Noise Floor',    unit: 'dB',  fmt: (v) => v },
+}
+
+function renderTelemetryEntry(rec) {
+  if (!rec?.lpp_data) return []
+  const data = typeof rec.lpp_data === 'string' ? JSON.parse(rec.lpp_data) : rec.lpp_data
+  return Object.entries(data).map(([key, val]) => {
+    const meta = TELEMETRY_FIELD_META[key.toLowerCase()]
+    let displayVal
+    if (meta) {
+      displayVal = meta.fmt(val)
+    } else if (typeof val === 'object' && val !== null) {
+      displayVal = JSON.stringify(val)
+    } else {
+      displayVal = String(val)
+    }
+    return {
+      key,
+      label: meta?.label ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      value: displayVal,
+      unit: meta?.unit ?? '',
+    }
+  })
+}
+
+function fmtStatusKey(key) {
+  return String(key).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function fmtStatusValue(key, val) {
+  if (val === null || val === undefined) return '—'
+  const k = key.toLowerCase()
+  if (k === 'uptime_secs' || k === 'uptime') return fmtUptime(val)
+  if (k.includes('noise')) return `${val} dB`
+  if (k === 'last_rssi' || k === 'last_snr') return `${val} dB`
+  if (k === 'voltage' || k.endsWith('_v')) return `${typeof val === 'number' ? val.toFixed(2) : val} V`
+  if (k === 'freq') return `${val} MHz`
+  if (k === 'tx_power' || k === 'txpwr') return `${val} dBm`
+  return String(val)
+}
+
+const ADMIN_SETTINGS = [
+  { key: 'name',  label: 'Device Name',       getCmd: 'get name',  setPrefix: 'set name',  placeholder: 'e.g. MyRepeater' },
+  { key: 'txpwr', label: 'TX Power (dBm)',     getCmd: 'get txpwr', setPrefix: 'set txpwr', placeholder: 'e.g. 20' },
+  { key: 'freq',  label: 'Frequency (MHz)',    getCmd: 'get freq',  setPrefix: 'set freq',  placeholder: 'e.g. 915.0' },
+  { key: 'bw',    label: 'Bandwidth (kHz)',    getCmd: 'get bw',    setPrefix: 'set bw',    placeholder: 'e.g. 250' },
+  { key: 'sf',    label: 'Spreading Factor',   getCmd: 'get sf',    setPrefix: 'set sf',    placeholder: 'e.g. 10' },
+  { key: 'cr',    label: 'Coding Rate',        getCmd: 'get cr',    setPrefix: 'set cr',    placeholder: 'e.g. 5' },
+]
 
 export default defineComponent({
   name: 'ContactDetail',
@@ -40,34 +120,48 @@ export default defineComponent({
     const history = ref([])
     const signal = ref([])
     const telemetry = ref([])
-    const activeTab = ref(['chat', 'info', 'activity'].includes(route.query.tab) ? route.query.tab : 'chat')
+    const activeTab = ref('chat')
     const sending = ref(false)
     const contactGroups = ref([])
     const newGroupName = ref('')
     const selectedGroupId = ref('')
     const pinging = ref(false)
-    const pingResult = ref(null)  // null | { success, latency_ms }
+    const pingResult = ref(null)
     const pings = ref([])
-    const adminPassword = ref('')
-    const adminLoggingIn = ref(false)
-    const loggedIn = ref(false)
     const newPath = ref('')
     const settingPath = ref(false)
     let signalChart = null
 
-    const thread = computed(() => messages.threads[threadKey] || [])
+    const currentPage = ref(null) // null | 'activity' | 'admin'
 
+    const telemetryModal = ref(false)
+    const telemetryPassword = ref('')
+    const requestingTelemetry = ref(false)
+    let telemetryTimeout = null
+
+    const adminPassword = ref('')
+    const adminLoggingIn = ref(false)
+    const loggedIn = ref(false)
+    const adminStatus = ref(null)
+    const fetchingAdminStatus = ref(false)
+    const adminAcl = ref(null)
+    const fetchingAdminAcl = ref(false)
+    const cliInput = ref('')
+    const cliSending = ref(false)
+    const cliHistory = ref([])
+    const settingInputs = ref({})
+
+    const thread = computed(() => messages.threads[threadKey] || [])
     const isRepeater = computed(() => contact.value?.contact_type_name === 'REP')
     const isSensor = computed(() => contact.value?.contact_type_name === 'SENS')
+    const hasTelemetry = computed(() => isRepeater.value || isSensor.value)
     const availableGroups = computed(() =>
       groupsStore.groups.filter((g) => !contactGroups.value.find((cg) => cg.id === g.id))
     )
 
-    // Parse out_path hex into 4-byte hops, try to match to known contacts
     const pathHops = computed(() => {
       const raw = contact.value?.out_path
       if (!raw) return []
-      // Normalize: if it's a non-hex string (binary), convert to hex
       let hex = raw
       if (!/^[0-9a-fA-F]*$/.test(raw)) {
         hex = Array.from(raw).map((c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
@@ -86,6 +180,7 @@ export default defineComponent({
     async function load() {
       try {
         contact.value = await contacts.fetchOne(contactId)
+        if (contact.value?.contact_type_name === 'REP') activeTab.value = 'info'
         messages.clearUnread(threadKey)
         const fetches = [
           contacts.fetchHistory(contactId).then((d) => { history.value = d }),
@@ -98,11 +193,38 @@ export default defineComponent({
           fetches.push(contacts.fetchTelemetry(contactId).then((d) => { telemetry.value = d }))
         }
         await Promise.all(fetches)
-        await nextTick()
-        renderSignalChart()
       } catch {
         toast.error('Failed to load contact')
       }
+    }
+
+    function handleTelemetryReceived(data) {
+      if (data.contact_id !== contactId) return
+      if (requestingTelemetry.value) {
+        if (telemetryTimeout) { clearTimeout(telemetryTimeout); telemetryTimeout = null }
+        requestingTelemetry.value = false
+      }
+      telemetry.value = [data.record, ...telemetry.value].slice(0, 50)
+    }
+
+    function handleMessageReceived(data) {
+      const msg = data.message
+      if (msg.contact_id !== contactId || msg.direction !== 'in') return
+      if (isRepeater.value) {
+        cliHistory.value.push({ type: 'received', text: msg.text, ts: Date.now() })
+      }
+    }
+
+    function handleAdminStatus(data) {
+      if (data.contact_id !== contactId) return
+      adminStatus.value = data.status
+      fetchingAdminStatus.value = false
+    }
+
+    function handleAdminAcl(data) {
+      if (data.contact_id !== null && data.contact_id !== contactId) return
+      adminAcl.value = data.data
+      fetchingAdminAcl.value = false
     }
 
     async function sendMsg(msgText) {
@@ -219,12 +341,73 @@ export default defineComponent({
       }
     }
 
-    async function doRequestTelemetry() {
+    async function doLogout() {
+      try { await contacts.logoutContact(contactId) } catch { /* reset client side */ }
+      loggedIn.value = false
+      adminStatus.value = null
+      adminAcl.value = null
+      cliHistory.value = []
+    }
+
+    async function openTelemetryModal() {
+      telemetryPassword.value = ''
+      telemetryModal.value = true
+    }
+
+    async function submitTelemetryRequest() {
+      if (requestingTelemetry.value) return
+      requestingTelemetry.value = true
+      telemetryModal.value = false
       try {
-        await contacts.requestTelemetry(contactId)
-        toast.info('Telemetry requested')
+        await contacts.requestTelemetry(contactId, telemetryPassword.value)
+        telemetryTimeout = setTimeout(() => {
+          if (requestingTelemetry.value) {
+            requestingTelemetry.value = false
+            toast.error('Telemetry request timed out after 30s')
+          }
+        }, 30000)
       } catch (e) {
+        requestingTelemetry.value = false
         toast.error(e.message || 'Failed to request telemetry')
+      }
+    }
+
+    async function doRequestAdminStatus() {
+      if (fetchingAdminStatus.value) return
+      fetchingAdminStatus.value = true
+      adminStatus.value = null
+      try {
+        await contacts.requestAdminStatus(contactId)
+      } catch (e) {
+        fetchingAdminStatus.value = false
+        toast.error(e.message || 'Failed to request status')
+      }
+    }
+
+    async function doRequestAdminAcl() {
+      if (fetchingAdminAcl.value) return
+      fetchingAdminAcl.value = true
+      adminAcl.value = null
+      try {
+        await contacts.requestAdminAcl(contactId)
+      } catch (e) {
+        fetchingAdminAcl.value = false
+        toast.error(e.message || 'Failed to request ACL')
+      }
+    }
+
+    async function sendCliCmd(cmd) {
+      const text = (typeof cmd === 'string' ? cmd : cliInput.value).trim()
+      if (!text || cliSending.value) return
+      cliHistory.value.push({ type: 'sent', text, ts: Date.now() })
+      if (typeof cmd !== 'string') cliInput.value = ''
+      cliSending.value = true
+      try {
+        await contacts.sendAdminCmd(contactId, text)
+      } catch (e) {
+        toast.error(e.message || 'Failed to send command')
+      } finally {
+        cliSending.value = false
       }
     }
 
@@ -247,8 +430,12 @@ export default defineComponent({
       signalChart.render()
     }
 
-    watch(activeTab, (tab) => {
-      if (tab === 'activity') nextTick(renderSignalChart)
+    watch(currentPage, (newPage, oldPage) => {
+      if (oldPage === 'activity' && signalChart) {
+        signalChart.destroy()
+        signalChart = null
+      }
+      if (newPage === 'activity') nextTick(renderSignalChart)
     })
 
     function fmtTime(ts) {
@@ -267,71 +454,341 @@ export default defineComponent({
       return `linear-gradient(135deg, ${from}, ${to})`
     }
 
-    onMounted(() => { load(); groupsStore.fetchAll() })
-    onBeforeUnmount(() => { if (signalChart) signalChart.destroy() })
+    onMounted(() => {
+      load()
+      groupsStore.fetchAll()
+      const socket = getSocket()
+      if (socket) {
+        socket.on('telemetry:received', handleTelemetryReceived)
+        socket.on('message:received', handleMessageReceived)
+        socket.on('node:status', handleAdminStatus)
+        socket.on('admin:acl', handleAdminAcl)
+      }
+    })
+
+    onBeforeUnmount(() => {
+      if (signalChart) signalChart.destroy()
+      if (telemetryTimeout) clearTimeout(telemetryTimeout)
+      const socket = getSocket()
+      if (socket) {
+        socket.off('telemetry:received', handleTelemetryReceived)
+        socket.off('message:received', handleMessageReceived)
+        socket.off('node:status', handleAdminStatus)
+        socket.off('admin:acl', handleAdminAcl)
+      }
+    })
 
     return {
       contact, history, signal, telemetry, pings, thread,
       activeTab, sending, contactGroups, newGroupName, selectedGroupId, availableGroups,
-      pinging, pingResult, adminPassword, adminLoggingIn, loggedIn, newPath, settingPath,
-      isRepeater, isSensor, pathHops,
+      pinging, pingResult, newPath, settingPath,
+      isRepeater, isSensor, hasTelemetry, pathHops,
+      currentPage, telemetryModal, telemetryPassword, requestingTelemetry,
+      adminPassword, adminLoggingIn, loggedIn,
+      adminStatus, fetchingAdminStatus, adminAcl, fetchingAdminAcl,
+      cliInput, cliSending, cliHistory, settingInputs,
       sendMsg, addToGroup, createAndAddToGroup, removeFromGroup, toggleFavorite,
-      ping, doResetPath, doSetPath, doLogin, doRequestTelemetry,
-      fmtTime, avatarStyle, router, TYPE_META,
+      ping, doResetPath, doSetPath, doLogin, doLogout,
+      openTelemetryModal, submitTelemetryRequest,
+      doRequestAdminStatus, doRequestAdminAcl, sendCliCmd,
+      fmtTime, fmtUptime, fmtStatusKey, fmtStatusValue,
+      renderTelemetryEntry, avatarStyle, router, TYPE_META, ADMIN_SETTINGS,
     }
   },
 
   template: `
     <div class="h-full flex flex-col">
-      <!-- Loading -->
       <div v-if="!contact" class="flex items-center justify-center h-full"><Spinner /></div>
 
       <template v-else>
-        <!-- Header bar -->
         <div
           class="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]"
           style="background: rgba(9,9,15,0.7); backdrop-filter: blur(16px);"
         >
-          <button @click="router.push('/contacts')" class="text-zinc-500 hover:text-zinc-200 transition-colors">
-            <Icon name="chevron-left" :size="22" />
-          </button>
+          <button
+            @click="currentPage ? currentPage = null : router.push('/contacts')"
+            class="text-zinc-500 hover:text-zinc-200 transition-colors flex-shrink-0"
+          ><Icon name="chevron-left" :size="22" /></button>
 
-          <div
-            class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
-            :style="{ background: avatarStyle(contact) }"
-          >{{ (contact.adv_name || contact.short_name || '?')[0].toUpperCase() }}</div>
+          <template v-if="currentPage === 'activity'">
+            <div class="flex-1 text-sm font-semibold text-white">Activity</div>
+          </template>
 
-          <div class="flex-1 min-w-0">
-            <div class="text-sm font-semibold text-white truncate">{{ contact.adv_name || contact.short_name || 'Unknown' }}</div>
-            <span
-              :class="['text-[10px] font-medium px-1.5 py-0.5 rounded-md border', TYPE_META[contact.contact_type_name]?.cls || TYPE_META.NONE.cls]"
-            >{{ TYPE_META[contact.contact_type_name]?.label || contact.contact_type_name }}</span>
+          <template v-else-if="currentPage === 'admin'">
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-white">Repeater Admin</div>
+              <div v-if="loggedIn" class="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
+                <Icon name="check-circle" :size="10" /> Authenticated
+              </div>
+            </div>
+          </template>
+
+          <template v-else>
+            <div
+              class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+              :style="{ background: avatarStyle(contact) }"
+            >{{ (contact.adv_name || contact.short_name || '?')[0].toUpperCase() }}</div>
+
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-semibold text-white truncate">{{ contact.adv_name || contact.short_name || 'Unknown' }}</div>
+              <span :class="['text-[10px] font-medium px-1.5 py-0.5 rounded-md border', TYPE_META[contact.contact_type_name]?.cls || TYPE_META.NONE.cls]">
+                {{ TYPE_META[contact.contact_type_name]?.label || contact.contact_type_name }}
+              </span>
+            </div>
+
+            <div
+              v-if="!isRepeater"
+              class="flex gap-1 md:hidden"
+              style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 3px;"
+            >
+              <button
+                v-for="t in ['chat','info']"
+                :key="t"
+                @click="activeTab = t"
+                :class="['px-2.5 py-1 rounded-lg text-[11px] font-medium capitalize transition-all', activeTab === t ? 'bg-violet-600 text-white' : 'text-zinc-500']"
+              >{{ t }}</button>
+            </div>
+          </template>
+        </div>
+
+        <!-- ACTIVITY PAGE -->
+        <div v-if="currentPage === 'activity'" class="flex-1 overflow-y-auto scrollbar-none px-4 py-5 space-y-6">
+          <div>
+            <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-2">Signal History</div>
+            <div v-if="!signal.length" class="text-sm text-zinc-600 py-4 text-center">No signal data yet.</div>
+            <div v-else id="signal-chart" class="rounded-xl overflow-hidden" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"></div>
           </div>
 
-          <!-- Tab switcher (mobile) -->
-          <div class="flex gap-1 md:hidden" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 3px;">
-            <button
-              v-for="t in ['chat','info','activity']"
-              :key="t"
-              @click="activeTab = t"
-              :class="['px-2.5 py-1 rounded-lg text-[11px] font-medium capitalize transition-all', activeTab === t ? 'bg-violet-600 text-white' : 'text-zinc-500']"
-            >{{ t }}</button>
+          <template v-if="hasTelemetry">
+            <div>
+              <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-3">Telemetry History</div>
+              <div v-if="!telemetry.length" class="text-sm text-zinc-600 py-2 text-center">No telemetry recorded.</div>
+              <div v-else class="space-y-3">
+                <div
+                  v-for="rec in telemetry"
+                  :key="rec.id"
+                  class="rounded-xl px-4 py-3"
+                  style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"
+                >
+                  <div class="text-[10px] text-zinc-600 mb-2">{{ new Date(rec.timestamp).toLocaleString() }}</div>
+                  <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div v-for="field in renderTelemetryEntry(rec)" :key="field.key">
+                      <div class="text-[10px] text-zinc-600 uppercase tracking-wider">{{ field.label }}</div>
+                      <div class="text-sm font-mono text-zinc-200 mt-0.5">
+                        {{ field.value }}<span v-if="field.unit" class="text-zinc-500 text-xs ml-0.5">{{ field.unit }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div>
+            <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-2">Ping History</div>
+            <div v-if="!pings.length" class="text-sm text-zinc-600 py-2 text-center">No pings recorded.</div>
+            <div v-else class="space-y-1">
+              <div
+                v-for="p in pings"
+                :key="p.id"
+                class="flex items-center justify-between text-xs py-1.5 px-3 rounded-lg"
+                style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);"
+              >
+                <span class="text-zinc-600">{{ new Date(p.sent_at).toLocaleString() }}</span>
+                <span :class="p.success ? 'text-cyan-300 font-mono' : 'text-rose-400'">
+                  {{ p.success ? p.latency_ms + 'ms' : 'timeout' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-2">Change History</div>
+            <div v-if="!history.length" class="text-sm text-zinc-600 py-4 text-center">No changes recorded.</div>
+            <div v-else class="space-y-1">
+              <div
+                v-for="entry in history"
+                :key="entry.id"
+                class="flex items-start gap-3 text-xs py-2 border-b border-white/[0.04]"
+              >
+                <span class="text-zinc-700 flex-shrink-0 w-28">{{ new Date(entry.timestamp).toLocaleString() }}</span>
+                <span class="text-zinc-500">{{ entry.field_name }}</span>
+                <span class="text-rose-400 line-through">{{ entry.old_value || '\u2014' }}</span>
+                <span class="text-emerald-400">{{ entry.new_value || '\u2014' }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Body -->
-        <div class="flex flex-1 min-h-0">
+        <!-- ADMIN PAGE -->
+        <div v-else-if="currentPage === 'admin'" class="flex-1 overflow-y-auto scrollbar-none px-4 py-5 space-y-5">
+          <template v-if="!loggedIn">
+            <div class="rounded-2xl p-5" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);">
+              <div class="text-sm font-semibold text-zinc-100 mb-1">Admin Login</div>
+              <div class="text-xs text-zinc-500 mb-4">Authenticate with the repeater to access admin functions.</div>
+              <form @submit.prevent="doLogin" class="space-y-3">
+                <input
+                  v-model="adminPassword"
+                  type="password"
+                  placeholder="Admin password\u2026"
+                  class="w-full px-3.5 py-2.5 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none"
+                  style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);"
+                  autofocus
+                />
+                <button
+                  type="submit"
+                  :disabled="!adminPassword || adminLoggingIn"
+                  class="w-full px-3 py-2.5 rounded-xl text-sm text-white font-semibold transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                  style="background: linear-gradient(135deg, #7c3aed, #9333ea);"
+                >
+                  <Icon name="key" :size="15" />
+                  {{ adminLoggingIn ? 'Logging in\u2026' : 'Login' }}
+                </button>
+              </form>
+            </div>
+          </template>
 
-          <!-- Info panel: always on desktop, mobile only when tab=info -->
+          <template v-else>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-emerald-400 flex items-center gap-1.5">
+                <Icon name="check-circle" :size="13" /> Authenticated as admin
+              </div>
+              <button
+                @click="doLogout"
+                class="text-xs text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1"
+              ><Icon name="logout" :size="12" /> Logout</button>
+            </div>
+
+            <!-- Node Status -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Node Status</div>
+                <button
+                  @click="doRequestAdminStatus"
+                  :disabled="fetchingAdminStatus"
+                  class="text-xs text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1 disabled:opacity-40"
+                ><Icon name="refresh" :size="12" /> {{ fetchingAdminStatus ? 'Waiting\u2026' : 'Fetch' }}</button>
+              </div>
+              <div class="rounded-xl px-4 py-3 min-h-[56px] flex items-center" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                <div v-if="fetchingAdminStatus" class="flex items-center gap-2 text-xs text-zinc-600">
+                  <Spinner /> Waiting for response\u2026
+                </div>
+                <div v-else-if="!adminStatus" class="text-xs text-zinc-700">
+                  Click Fetch to request status from the node.
+                </div>
+                <div v-else class="w-full grid grid-cols-2 gap-x-4 gap-y-2">
+                  <div v-for="(val, key) in adminStatus" :key="key">
+                    <div class="text-[10px] text-zinc-600 uppercase tracking-wider">{{ fmtStatusKey(key) }}</div>
+                    <div class="text-sm font-mono text-zinc-200 mt-0.5">{{ fmtStatusValue(key, val) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CLI -->
+            <div>
+              <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-2">Command Line</div>
+              <div class="rounded-xl overflow-hidden" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.07);">
+                <div class="h-52 overflow-y-auto scrollbar-none p-3 space-y-0.5 font-mono text-xs">
+                  <div v-if="!cliHistory.length" class="text-zinc-700 py-4 text-center">No commands sent yet.</div>
+                  <div
+                    v-for="(entry, i) in cliHistory"
+                    :key="i"
+                    class="leading-5"
+                    :class="entry.type === 'sent' ? 'text-violet-300' : 'text-zinc-300'"
+                  >
+                    <span class="text-zinc-700 select-none mr-1">{{ entry.type === 'sent' ? '>' : '<' }}</span>{{ entry.text }}
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2.5 border-t border-white/[0.06]">
+                  <span class="text-zinc-600 font-mono text-xs select-none">$</span>
+                  <input
+                    v-model="cliInput"
+                    @keydown.enter.prevent="sendCliCmd()"
+                    type="text"
+                    placeholder="Enter command\u2026"
+                    class="flex-1 bg-transparent text-xs text-zinc-100 placeholder-zinc-700 outline-none font-mono"
+                  />
+                  <button
+                    @click="sendCliCmd()"
+                    :disabled="!cliInput.trim() || cliSending"
+                    class="text-zinc-600 hover:text-violet-400 transition-colors disabled:opacity-40"
+                  ><Icon name="paper-airplane" :size="15" /></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Settings -->
+            <div>
+              <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-3">Settings</div>
+              <div class="space-y-2">
+                <div
+                  v-for="s in ADMIN_SETTINGS"
+                  :key="s.key"
+                  class="rounded-xl px-3 py-3"
+                  style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"
+                >
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-zinc-400 font-medium">{{ s.label }}</span>
+                    <button
+                      @click="sendCliCmd(s.getCmd)"
+                      class="text-[10px] text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1"
+                    ><Icon name="refresh" :size="10" /> Fetch</button>
+                  </div>
+                  <div class="flex gap-2">
+                    <input
+                      :value="settingInputs[s.key] || ''"
+                      @input="settingInputs[s.key] = $event.target.value"
+                      type="text"
+                      :placeholder="s.placeholder"
+                      class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-700 outline-none font-mono"
+                      style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
+                      @keydown.enter.prevent="settingInputs[s.key] && sendCliCmd(s.setPrefix + ' ' + settingInputs[s.key])"
+                    />
+                    <button
+                      @click="settingInputs[s.key] && sendCliCmd(s.setPrefix + ' ' + settingInputs[s.key])"
+                      :disabled="!settingInputs[s.key]"
+                      class="px-2.5 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40"
+                      style="background: rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.4);"
+                    >Set</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ACL -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Access Control List</div>
+                <button
+                  @click="doRequestAdminAcl"
+                  :disabled="fetchingAdminAcl"
+                  class="text-xs text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1 disabled:opacity-40"
+                ><Icon name="refresh" :size="12" /> {{ fetchingAdminAcl ? 'Waiting\u2026' : 'Fetch' }}</button>
+              </div>
+              <div class="rounded-xl px-4 py-3 min-h-[48px] flex items-center" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                <div v-if="fetchingAdminAcl" class="flex items-center gap-2 text-xs text-zinc-600">
+                  <Spinner /> Waiting\u2026
+                </div>
+                <div v-else-if="!adminAcl" class="text-xs text-zinc-700">Click Fetch to request the ACL from the node.</div>
+                <pre v-else class="text-xs text-zinc-300 font-mono whitespace-pre-wrap break-all w-full">{{ JSON.stringify(adminAcl, null, 2) }}</pre>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- MAIN LAYOUT -->
+        <div v-else class="flex flex-1 min-h-0">
+
+          <!-- Info Panel -->
           <div
             :class="[
               'flex-col border-r border-white/[0.05] overflow-y-auto scrollbar-none',
-              activeTab === 'info' ? 'flex flex-1' : 'hidden',
+              (activeTab === 'info' || isRepeater) ? 'flex flex-1' : 'hidden',
               'md:flex md:flex-initial md:w-72 md:flex-shrink-0'
             ]"
             style="background: rgba(9,9,15,0.4);"
           >
-            <!-- Contact card -->
             <div class="p-5 border-b border-white/[0.05]">
               <div
                 class="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-xl mb-3 shadow-lg"
@@ -340,28 +797,39 @@ export default defineComponent({
               <div class="text-base font-bold text-white">{{ contact.adv_name || 'Unknown' }}</div>
               <div v-if="contact.short_name" class="text-xs text-zinc-500 mt-0.5">{{ contact.short_name }}</div>
               <div class="text-[10px] text-zinc-700 font-mono mt-1 break-all">{{ contact.public_key }}</div>
-              <div class="flex items-center gap-2 mt-3">
-                <template v-if="isRepeater">
-                  <button
-                    @click="ping"
-                    :disabled="pinging"
-                    title="Ping (zero hop)"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40"
-                  ><Icon name="signal" :size="17" /></button>
-                  <span
-                    v-if="pingResult !== null"
-                    :class="['text-xs font-mono tabular-nums', pingResult.success ? 'text-cyan-300' : 'text-rose-400']"
-                  >{{ pingResult.success ? pingResult.latency_ms + 'ms' : 'timeout' }}</span>
-                </template>
+
+              <div class="flex items-center gap-1.5 mt-3 flex-wrap">
+                <button
+                  @click="ping"
+                  :disabled="pinging"
+                  class="h-8 px-2.5 flex items-center gap-1.5 rounded-lg transition-colors text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40 text-xs font-medium"
+                >
+                  <Icon name="signal" :size="14" />{{ pinging ? '\u2026' : 'Ping' }}
+                </button>
+                <span
+                  v-if="pingResult !== null"
+                  :class="['text-xs font-mono tabular-nums', pingResult.success ? 'text-cyan-300' : 'text-rose-400']"
+                >{{ pingResult.success ? pingResult.latency_ms + 'ms' : 'timeout' }}</span>
+
+                <button
+                  v-if="hasTelemetry"
+                  @click="openTelemetryModal"
+                  :disabled="requestingTelemetry"
+                  class="h-8 px-2.5 flex items-center gap-1.5 rounded-lg transition-colors text-emerald-500 hover:text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40 text-xs font-medium"
+                >
+                  <Spinner v-if="requestingTelemetry" />
+                  <Icon v-else name="chart-bar" :size="14" />
+                  {{ requestingTelemetry ? 'Waiting\u2026' : 'Telemetry' }}
+                </button>
+
                 <button
                   @click="toggleFavorite"
-                  :class="['w-8 h-8 flex items-center justify-center rounded-lg transition-colors', contact.favorite ? 'text-amber-400' : 'text-zinc-600 hover:text-amber-500']"
+                  :class="['ml-auto w-8 h-8 flex items-center justify-center rounded-lg transition-colors', contact.favorite ? 'text-amber-400' : 'text-zinc-600 hover:text-amber-500']"
                   title="Favorite"
                 ><Icon :name="contact.favorite ? 'star-solid' : 'star'" :size="17" /></button>
               </div>
             </div>
 
-            <!-- Fields -->
             <div class="px-5 py-4 space-y-3 border-b border-white/[0.04]">
               <div class="flex justify-between text-sm">
                 <span class="text-zinc-500">Last heard</span>
@@ -378,17 +846,30 @@ export default defineComponent({
               <div v-if="contact.notes" class="text-xs text-zinc-400 leading-relaxed">{{ contact.notes }}</div>
             </div>
 
+            <!-- Latest telemetry -->
+            <div v-if="hasTelemetry && telemetry.length" class="px-5 py-4 border-b border-white/[0.04]">
+              <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-1">Latest Telemetry</div>
+              <div class="text-[10px] text-zinc-700 mb-2">{{ new Date(telemetry[0].timestamp).toLocaleString() }}</div>
+              <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div v-for="field in renderTelemetryEntry(telemetry[0])" :key="field.key">
+                  <div class="text-[10px] text-zinc-600">{{ field.label }}</div>
+                  <div class="text-sm font-mono text-zinc-200 mt-0.5">
+                    {{ field.value }}<span v-if="field.unit" class="text-zinc-500 text-xs ml-0.5">{{ field.unit }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Path -->
             <div class="px-5 py-4 border-b border-white/[0.04]">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Path</div>
                 <button
                   @click="doResetPath"
-                  title="Reset path"
                   class="text-zinc-700 hover:text-rose-400 transition-colors text-xs flex items-center gap-1"
                 ><Icon name="refresh" :size="12" /> Reset</button>
               </div>
-              <div v-if="!contact.out_path" class="text-xs text-zinc-700 mb-3">No path — direct or undiscovered</div>
+              <div v-if="!contact.out_path" class="text-xs text-zinc-700 mb-3">No path \u2014 direct or undiscovered</div>
               <div v-else class="space-y-1.5 mb-3">
                 <div v-for="(hop, idx) in pathHops" :key="idx" class="flex items-center gap-2 text-xs">
                   <span class="text-zinc-700 w-4 flex-shrink-0 text-right font-mono">{{ idx + 1 }}</span>
@@ -402,7 +883,7 @@ export default defineComponent({
                 <input
                   v-model="newPath"
                   type="text"
-                  placeholder="Set path hex…"
+                  placeholder="Set path hex\u2026"
                   class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none font-mono"
                   style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
                 />
@@ -436,7 +917,7 @@ export default defineComponent({
                   class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 outline-none"
                   style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
                 >
-                  <option value="" disabled>Add to existing group…</option>
+                  <option value="" disabled>Add to existing group\u2026</option>
                   <option v-for="g in availableGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
                 </select>
                 <button
@@ -450,7 +931,7 @@ export default defineComponent({
                 <input
                   v-model="newGroupName"
                   type="text"
-                  placeholder="New group name…"
+                  placeholder="New group name\u2026"
                   class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none"
                   style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
                 />
@@ -463,132 +944,29 @@ export default defineComponent({
               </form>
             </div>
 
-            <!-- Repeater Admin -->
-            <div v-if="isRepeater" class="px-5 py-4">
-              <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-3">Repeater Admin</div>
-
-              <!-- Not logged in -->
-              <template v-if="!loggedIn">
-                <form @submit.prevent="doLogin" class="space-y-2">
-                  <input
-                    v-model="adminPassword"
-                    type="password"
-                    placeholder="Admin password…"
-                    class="w-full px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none"
-                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
-                  />
-                  <button
-                    type="submit"
-                    :disabled="!adminPassword || adminLoggingIn"
-                    class="w-full px-3 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
-                    style="background: rgba(14,116,144,0.3); border: 1px solid rgba(14,116,144,0.4);"
-                  >
-                    <Icon name="key" :size="12" />
-                    {{ adminLoggingIn ? 'Logging in…' : 'Login' }}
-                  </button>
-                </form>
-              </template>
-
-              <!-- Logged in: admin actions -->
-              <template v-else>
-                <div class="text-xs text-emerald-400 mb-3 flex items-center gap-1.5">
-                  <Icon name="check-circle" :size="13" /> Logged in
-                </div>
-                <div class="space-y-2">
-                  <button
-                    @click="ping"
-                    :disabled="pinging"
-                    class="w-full px-3 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
-                    style="background: rgba(14,116,144,0.3); border: 1px solid rgba(14,116,144,0.4);"
-                  ><Icon name="signal" :size="12" /> {{ pinging ? 'Pinging…' : 'Ping (zero hop)' }}</button>
-                  <button
-                    @click="doRequestTelemetry"
-                    class="w-full px-3 py-1.5 rounded-lg text-xs text-white transition-colors flex items-center justify-center gap-1.5"
-                    style="background: rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.3);"
-                  ><Icon name="chart-bar" :size="12" /> Request Telemetry</button>
-                  <button
-                    @click="loggedIn = false"
-                    class="w-full px-3 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center justify-center gap-1.5"
-                    style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"
-                  ><Icon name="logout" :size="12" /> Logout</button>
-                </div>
-              </template>
+            <!-- Nav buttons -->
+            <div class="px-5 py-2">
+              <button
+                @click="currentPage = 'activity'"
+                class="w-full flex items-center justify-between py-3 text-sm text-zinc-400 hover:text-zinc-200 transition-colors border-b border-white/[0.04]"
+              >
+                <div class="flex items-center gap-2.5"><Icon name="chart-bar" :size="16" /> Activity</div>
+                <Icon name="chevron-right" :size="16" />
+              </button>
+              <button
+                v-if="isRepeater"
+                @click="currentPage = 'admin'"
+                class="w-full flex items-center justify-between py-3 text-sm text-cyan-400 hover:text-cyan-200 transition-colors"
+              >
+                <div class="flex items-center gap-2.5"><Icon name="cog" :size="16" /> Repeater Admin</div>
+                <Icon name="chevron-right" :size="16" />
+              </button>
             </div>
           </div>
 
-          <!-- Activity panel: mobile tab, always on desktop -->
+          <!-- Chat Panel (non-repeaters only) -->
           <div
-            :class="[
-              'flex-col overflow-y-auto scrollbar-none px-4 py-4 space-y-3',
-              'md:flex md:flex-none md:w-64 md:flex-shrink-0 md:border-r md:border-white/[0.05]',
-              activeTab === 'activity' ? 'flex flex-1' : 'hidden'
-            ]"
-          >
-            <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-1">Signal History</div>
-            <div v-if="!signal.length" class="text-sm text-zinc-600 py-4 text-center">No signal data yet.</div>
-            <div v-else id="signal-chart" class="rounded-xl overflow-hidden" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"></div>
-
-            <!-- Telemetry (REP / SENS) -->
-            <template v-if="isRepeater || isSensor">
-              <div class="flex items-center justify-between mt-4 mb-1">
-                <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Telemetry</div>
-                <button
-                  @click="doRequestTelemetry"
-                  class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1"
-                ><Icon name="refresh" :size="12" /> Request</button>
-              </div>
-              <div v-if="!telemetry.length" class="text-sm text-zinc-600 py-2 text-center">No telemetry yet.</div>
-              <div
-                v-for="rec in telemetry"
-                :key="rec.id"
-                class="rounded-xl px-3 py-2.5 space-y-1"
-                style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"
-              >
-                <div class="text-[10px] text-zinc-600">{{ new Date(rec.timestamp).toLocaleString() }}</div>
-                <div class="flex flex-wrap gap-x-4 gap-y-1">
-                  <template v-for="(val, key) in rec.lpp_data" :key="key">
-                    <div class="text-xs">
-                      <span class="text-zinc-600 capitalize">{{ String(key).replace(/_/g, ' ') }}</span>
-                      <span class="text-zinc-300 ml-1.5">{{ typeof val === 'object' ? JSON.stringify(val) : val }}</span>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </template>
-
-            <!-- Ping history -->
-            <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mt-4 mb-1">Ping History</div>
-            <div v-if="!pings.length" class="text-sm text-zinc-600 py-2 text-center">No pings recorded.</div>
-            <div v-else class="space-y-1">
-              <div
-                v-for="p in pings"
-                :key="p.id"
-                class="flex items-center justify-between text-xs py-1.5 px-3 rounded-lg"
-                style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);"
-              >
-                <span class="text-zinc-600">{{ new Date(p.sent_at).toLocaleString() }}</span>
-                <span :class="p.success ? 'text-cyan-300 font-mono' : 'text-rose-400'">
-                  {{ p.success ? p.latency_ms + 'ms' : 'timeout' }}
-                </span>
-              </div>
-            </div>
-
-            <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mt-4 mb-1">Change History</div>
-            <div v-if="!history.length" class="text-sm text-zinc-600 py-4 text-center">No changes recorded.</div>
-            <div
-              v-for="entry in history"
-              :key="entry.id"
-              class="flex items-start gap-3 text-xs py-2 border-b border-white/[0.04]"
-            >
-              <span class="text-zinc-700 flex-shrink-0 w-28">{{ new Date(entry.timestamp).toLocaleString() }}</span>
-              <span class="text-zinc-500">{{ entry.field_name }}</span>
-              <span class="text-rose-400 line-through">{{ entry.old_value || '—' }}</span>
-              <span class="text-emerald-400">{{ entry.new_value || '—' }}</span>
-            </div>
-          </div>
-
-          <!-- Chat panel: always on desktop, mobile only when tab=chat -->
-          <div
+            v-if="!isRepeater"
             :class="[
               'flex-col flex-1 min-w-0',
               activeTab === 'chat' ? 'flex' : 'hidden',
@@ -599,6 +977,44 @@ export default defineComponent({
           </div>
         </div>
       </template>
+
+      <!-- Telemetry Modal -->
+      <div
+        v-if="telemetryModal"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+        style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);"
+        @click.self="telemetryModal = false"
+      >
+        <div
+          class="w-full max-w-sm rounded-2xl p-5 space-y-4"
+          style="background: rgba(15,15,24,0.97); border: 1px solid rgba(255,255,255,0.1);"
+        >
+          <div>
+            <div class="text-base font-semibold text-white mb-1">Request Telemetry</div>
+            <div class="text-xs text-zinc-500">Some nodes require a password to return telemetry. Leave blank if not required.</div>
+          </div>
+          <input
+            v-model="telemetryPassword"
+            type="password"
+            placeholder="Password (optional)"
+            class="w-full px-3.5 py-2.5 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none"
+            style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);"
+            @keydown.enter.prevent="submitTelemetryRequest"
+          />
+          <div class="flex gap-2">
+            <button
+              @click="telemetryModal = false"
+              class="flex-1 px-3 py-2.5 rounded-xl text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+              style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);"
+            >Cancel</button>
+            <button
+              @click="submitTelemetryRequest"
+              class="flex-1 px-3 py-2.5 rounded-xl text-sm text-white font-semibold"
+              style="background: linear-gradient(135deg, #059669, #047857);"
+            >Request</button>
+          </div>
+        </div>
+      </div>
     </div>
   `,
 })
