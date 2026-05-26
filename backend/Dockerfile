@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install dependencies first for layer caching
 COPY requirements.txt .
-RUN apt-get update && apt-get install -y --no-install-recommends su-exec && \
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir -r requirements.txt
 
