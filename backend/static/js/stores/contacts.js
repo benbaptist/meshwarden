@@ -54,6 +54,44 @@ export const useContactsStore = defineStore('contacts', () => {
     return api.json(`/api/contacts/${id}/telemetry_req`, { method: 'POST' })
   }
 
+  async function toggleFavorite(id) {
+    const contact = contacts.value.find((c) => c.id === id)
+    const updated = await update(id, { favorite: !contact?.favorite })
+    return updated
+  }
+
+  async function ping(id) {
+    return api.json(`/api/contacts/${id}/ping`, { method: 'POST' })
+  }
+
+  async function resetPath(id) {
+    const updated = await api.json(`/api/contacts/${id}/reset_path`, { method: 'POST' })
+    if (updated.contact) {
+      const idx = contacts.value.findIndex((c) => c.id === id)
+      if (idx !== -1) contacts.value[idx] = updated.contact
+    }
+    return updated
+  }
+
+  async function setPath(id, pathHex) {
+    const updated = await api.json(`/api/contacts/${id}/set_path`, {
+      method: 'POST',
+      body: JSON.stringify({ path: pathHex }),
+    })
+    if (updated.contact) {
+      const idx = contacts.value.findIndex((c) => c.id === id)
+      if (idx !== -1) contacts.value[idx] = updated.contact
+    }
+    return updated
+  }
+
+  async function loginContact(id, password) {
+    return api.json(`/api/contacts/${id}/login`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    })
+  }
+
   function bindSocket() {
     const socket = getSocket()
     if (!socket) return
@@ -73,6 +111,8 @@ export const useContactsStore = defineStore('contacts', () => {
   return {
     contacts, loading,
     fetchAll, fetchOne, update, fetchHistory, fetchTelemetry,
-    fetchMessages, fetchSignal, requestTelemetry, bindSocket,
+    fetchMessages, fetchSignal, requestTelemetry,
+    toggleFavorite, ping, resetPath, setPath, loginContact,
+    bindSocket,
   }
 })

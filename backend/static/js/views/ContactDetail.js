@@ -37,25 +37,59 @@ export default defineComponent({
     const contact = ref(null)
     const history = ref([])
     const signal = ref([])
+    const telemetry = ref([])
     const activeTab = ref('chat')
     const text = ref('')
     const sending = ref(false)
     const threadRef = ref(null)
     const newTag = ref('')
+    const pinging = ref(false)
+    const adminPassword = ref('')
+    const adminLoggingIn = ref(false)
+    const loggedIn = ref(false)
+    const newPath = ref('')
+    const settingPath = ref(false)
     let signalChart = null
 
     const thread = computed(() => messages.threads[threadKey] || [])
     const sortedThread = computed(() => [...thread.value].reverse())
 
+    const isRepeater = computed(() => contact.value?.contact_type_name === 'REP')
+    const isSensor = computed(() => contact.value?.contact_type_name === 'SENS')
+
+    // Parse out_path hex into 4-byte hops, try to match to known contacts
+    const pathHops = computed(() => {
+      const raw = contact.value?.out_path
+      if (!raw) return []
+      // Normalize: if it's a non-hex string (binary), convert to hex
+      let hex = raw
+      if (!/^[0-9a-fA-F]*$/.test(raw)) {
+        hex = Array.from(raw).map((c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
+      }
+      if (!hex || hex.length < 8) return []
+      const hops = []
+      for (let i = 0; i < hex.length; i += 8) {
+        const hopHex = hex.slice(i, i + 8)
+        if (hopHex.length < 8) break
+        const matched = contacts.contacts.find((c) => c.public_key.toLowerCase().startsWith(hopHex.toLowerCase()))
+        hops.push({ hex: hopHex, name: matched?.adv_name || null })
+      }
+      return hops
+    })
+
     async function load() {
       try {
         contact.value = await contacts.fetchOne(contactId)
         messages.clearUnread(threadKey)
-        await Promise.all([
+        const fetches = [
           contacts.fetchHistory(contactId).then((d) => { history.value = d }),
           contacts.fetchSignal(contactId).then((d) => { signal.value = d }),
           messages.fetchThread(threadKey, { contact_id: contactId, msg_type: 'direct' }),
-        ])
+        ]
+        if (contact.value?.contact_type_name === 'REP' || contact.value?.contact_type_name === 'SENS') {
+          fetches.push(contacts.fetchTelemetry(contactId).then((d) => { telemetry.value = d }))
+        }
+        await Promise.all(fetches)
         await nextTick()
         scrollThread()
       } catch {
@@ -97,6 +131,137 @@ export default defineComponent({
       contact.value = await contacts.update(contactId, { tags })
       newTag.value = ''
     }
+
+    async function removeTag(tag) {
+      if (!contact.value) return
+      const tags = contact.value.tags.filter((t) => t !== tag)
+      contact.value = await contacts.update(contactId, { tags })
+    }
+
+    async function toggleFavorite() {
+      try {
+        contact.value = await contacts.toggleFavorite(contactId)
+      } catch {
+        toast.error('Failed to update favorite')
+      }
+    }
+
+    async function ping() {
+      if (pinging.value) return
+      pinging.value = true
+      try {
+        await contacts.ping(contactId)
+        toast.info('Ping sent')
+      } catch (e) {
+        toast.error(e.message || 'Ping failed')
+      } finally {
+        pinging.value = false
+      }
+    }
+
+    async function doResetPath() {
+      try {
+        const result = await contacts.resetPath(contactId)
+        contact.value = result.contact
+        toast.info('Path reset')
+      } catch (e) {
+        toast.error(e.message || 'Failed to reset path')
+      }
+    }
+
+    async function doSetPath() {
+      if (!newPath.value.trim() || settingPath.value) return
+      settingPath.value = true
+      try {
+        const result = await contacts.setPath(contactId, newPath.value.trim())
+        contact.value = result.contact
+        newPath.value = ''
+        toast.info('Path updated')
+      } catch (e) {
+        toast.error(e.message || 'Failed to set path')
+      } finally {
+        settingPath.value = false
+      }
+    }
+
+    async function doLogin() {
+      if (!adminPassword.value || adminLoggingIn.value) return
+      adminLoggingIn.value = true
+      try {
+        await contacts.loginContact(contactId, adminPassword.value)
+        loggedIn.value = true
+        adminPassword.value = ''
+        toast.info('Login sent to repeater')
+      } catch (e) {
+        toast.error(e.message || 'Login failed')
+      } finally {
+        adminLoggingIn.value = false
+      }
+    }
+
+    async function doRequestTelemetry() {
+      try {
+        await contacts.requestTelemetry(contactId)
+        toast.info('Telemetry requested')
+      } catch (e) {
+        toast.error(e.message || 'Failed to request telemetry')
+      }
+    }
+
+    function renderSignalChart() {
+      const el = document.getElementById('signal-chart')
+      if (!el || !signal.value.length || typeof ApexCharts === 'undefined') return
+      const data = signal.value.slice().reverse()
+      signalChart = new ApexCharts(el, {
+        chart: { type: 'line', height: 160, background: 'transparent', toolbar: { show: false } },
+        theme: { mode: 'dark' },
+        series: [{ name: 'SNR (dB)', data: data.map((r) => ({ x: new Date(r.timestamp), y: r.snr })) }],
+        xaxis: { type: 'datetime', labels: { style: { colors: '#52525b', fontSize: '10px' } } },
+        yaxis: { labels: { style: { colors: '#52525b', fontSize: '10px' } } },
+        stroke: { width: 2, curve: 'smooth' },
+        colors: ['#a78bfa'],
+        grid: { borderColor: '#27272a' },
+        tooltip: { theme: 'dark' },
+      })
+      signalChart.render()
+    }
+
+    watch(activeTab, (tab) => {
+      if (tab === 'activity') nextTick(renderSignalChart)
+      if (tab === 'chat') nextTick(scrollThread)
+    })
+
+    watch(thread, () => nextTick(scrollThread))
+
+    function fmtTime(ts) {
+      if (!ts) return '—'
+      const d = new Date(ts)
+      const diff = (Date.now() - d) / 1000
+      if (diff < 60) return 'now'
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+      return d.toLocaleDateString()
+    }
+
+    function avatarStyle(c) {
+      const name = c?.adv_name || c?.short_name || '?'
+      const [from, to] = GRADIENTS[nameHash(name) % GRADIENTS.length]
+      return `linear-gradient(135deg, ${from}, ${to})`
+    }
+
+    onMounted(load)
+    onBeforeUnmount(() => { if (signalChart) signalChart.destroy() })
+
+    return {
+      contact, history, signal, telemetry, thread, sortedThread,
+      activeTab, text, sending, threadRef, newTag,
+      pinging, adminPassword, adminLoggingIn, loggedIn, newPath, settingPath,
+      isRepeater, isSensor, pathHops,
+      send, onKeydown, addTag, removeTag, toggleFavorite,
+      ping, doResetPath, doSetPath, doLogin, doRequestTelemetry,
+      fmtTime, avatarStyle, router, TYPE_META,
+    }
+  },
 
     async function removeTag(tag) {
       if (!contact.value) return

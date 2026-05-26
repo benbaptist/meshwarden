@@ -46,6 +46,7 @@ class EventHandler:
             EventType.NEW_CONTACT: self._on_new_contact,
             EventType.TELEMETRY_RESPONSE: self._on_telemetry,
             EventType.STATUS_RESPONSE: self._on_status,
+            EventType.PATH_UPDATE: self._on_path_update,
             EventType.CONNECTED: self._on_connected,
             EventType.DISCONNECTED: self._on_disconnected,
             EventType.MSG_SENT: self._on_msg_sent,
@@ -72,6 +73,9 @@ class EventHandler:
                 Contact.public_key.like(pubkey_prefix + '%'),
             )
         ).scalar_one_or_none()
+
+        if contact:
+            contact.last_heard = datetime.now(timezone.utc)
 
         msg = Message(
             node_id=self.node_id,
@@ -209,7 +213,9 @@ class EventHandler:
             db.select(Contact).filter_by(node_id=self.node_id, public_key=public_key)
         ).scalar_one_or_none()
         if contact:
-            contact.last_advert = datetime.now(timezone.utc)
+            now = datetime.now(timezone.utc)
+            contact.last_advert = now
+            contact.last_heard = now
             db.session.commit()
             socketio.emit('contact:updated', {
                 'node_id': self.node_id,
@@ -250,10 +256,44 @@ class EventHandler:
         })
 
     def _on_status(self, event, db, socketio) -> None:
+        from ..db.models import Contact
+        p = event.payload
+        contact_id = None
+        pubkey_prefix = p.get('pubkey_prefix') or p.get('pubkey_pre', '')
+        if pubkey_prefix:
+            contact = db.session.execute(
+                db.select(Contact).filter(
+                    Contact.node_id == self.node_id,
+                    Contact.public_key.like(pubkey_prefix + '%'),
+                )
+            ).scalar_one_or_none()
+            if contact:
+                contact_id = contact.id
         socketio.emit('node:status', {
             'node_id': self.node_id,
-            'status': event.payload,
+            'contact_id': contact_id,
+            'status': p,
         })
+
+    def _on_path_update(self, event, db, socketio) -> None:
+        from ..db.models import Contact
+        p = event.payload
+        public_key = p.get('public_key', '')
+        if not public_key:
+            return
+        contact = db.session.execute(
+            db.select(Contact).filter_by(node_id=self.node_id, public_key=public_key)
+        ).scalar_one_or_none()
+        if not contact:
+            return
+        out_path = p.get('out_path') or p.get('path')
+        if out_path is not None:
+            contact.out_path = out_path
+            db.session.commit()
+            socketio.emit('contact:updated', {
+                'node_id': self.node_id,
+                'contact': contact.to_dict(),
+            })
 
     # ------------------------------------------------------------------
     # Node connection events

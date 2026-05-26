@@ -50,6 +50,8 @@ def update_contact(contact_id: int):
         contact.set_tags(data['tags'])
     if 'notes' in data:
         contact.notes = str(data['notes'])[:4096]
+    if 'favorite' in data:
+        contact.favorite = bool(data['favorite'])
 
     db.session.commit()
     return jsonify(contact.to_dict())
@@ -147,10 +149,6 @@ def request_telemetry(contact_id: int):
     if not conn or not conn.is_connected:
         return jsonify({'error': 'Node not connected'}), 503
 
-    async def _req(mc, contact_dict):
-        return await mc.commands.send_telemetry_req(contact_dict)
-
-    # Build contact dict in meshcore format
     contact_dict = {
         'public_key': contact.public_key,
         'adv_name': contact.adv_name or '',
@@ -159,7 +157,113 @@ def request_telemetry(contact_id: int):
     }
 
     try:
-        node_manager.run_async(_req(conn.mc, contact_dict), timeout=10)
+        node_manager.run_async(conn.mc.commands.send_telemetry_req(contact_dict), timeout=10)
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+def _build_contact_dict(contact):
+    return {
+        'public_key': contact.public_key,
+        'adv_name': contact.adv_name or '',
+        'type': contact.contact_type,
+        'out_path': contact.out_path or '',
+    }
+
+
+@contacts_bp.post('/<int:contact_id>/ping')
+@require_auth
+def ping_contact(contact_id: int):
+    contact = db.session.get(Contact, contact_id)
+    if not contact:
+        return jsonify({'error': 'Contact not found'}), 404
+
+    conn = node_manager.get_connection(contact.node_id)
+    if not conn or not conn.is_connected:
+        return jsonify({'error': 'Node not connected'}), 503
+
+    try:
+        node_manager.run_async(
+            conn.mc.commands.req_status(_build_contact_dict(contact), timeout=0), timeout=5
+        )
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.post('/<int:contact_id>/reset_path')
+@require_auth
+def reset_contact_path(contact_id: int):
+    contact = db.session.get(Contact, contact_id)
+    if not contact:
+        return jsonify({'error': 'Contact not found'}), 404
+
+    conn = node_manager.get_connection(contact.node_id)
+    if not conn or not conn.is_connected:
+        return jsonify({'error': 'Node not connected'}), 503
+
+    try:
+        node_manager.run_async(conn.mc.commands.reset_path(contact.public_key), timeout=10)
+        contact.out_path = None
+        db.session.commit()
+        return jsonify({'ok': True, 'contact': contact.to_dict()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.post('/<int:contact_id>/set_path')
+@require_auth
+def set_contact_path(contact_id: int):
+    contact = db.session.get(Contact, contact_id)
+    if not contact:
+        return jsonify({'error': 'Contact not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    path_hex = data.get('path', '').strip()
+
+    try:
+        path_bytes = bytes.fromhex(path_hex) if path_hex else b''
+    except ValueError:
+        return jsonify({'error': 'Invalid hex path'}), 400
+
+    conn = node_manager.get_connection(contact.node_id)
+    if not conn or not conn.is_connected:
+        return jsonify({'error': 'Node not connected'}), 503
+
+    try:
+        node_manager.run_async(
+            conn.mc.commands.change_contact_path(_build_contact_dict(contact), path_bytes),
+            timeout=10,
+        )
+        contact.out_path = path_hex or None
+        db.session.commit()
+        return jsonify({'ok': True, 'contact': contact.to_dict()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.post('/<int:contact_id>/login')
+@require_auth
+def login_contact(contact_id: int):
+    contact = db.session.get(Contact, contact_id)
+    if not contact:
+        return jsonify({'error': 'Contact not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    password = data.get('password', '')
+    if not password:
+        return jsonify({'error': 'Password required'}), 400
+
+    conn = node_manager.get_connection(contact.node_id)
+    if not conn or not conn.is_connected:
+        return jsonify({'error': 'Node not connected'}), 503
+
+    try:
+        node_manager.run_async(
+            conn.mc.commands.send_login(contact.public_key, password), timeout=10
+        )
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+

@@ -88,6 +88,8 @@ class NodeConnection:
                         existing.out_path = data.get('out_path') or existing.out_path
                         if last_advert:
                             existing.last_advert = last_advert
+                            if not existing.last_heard:
+                                existing.last_heard = last_advert
                     else:
                         contact = Contact(
                             node_id=self.node_id,
@@ -95,6 +97,7 @@ class NodeConnection:
                             adv_name=data.get('adv_name', ''),
                             contact_type=data.get('type', 0),
                             last_advert=last_advert,
+                            last_heard=last_advert,
                             lat=data.get('adv_lat'),
                             lon=data.get('adv_lon'),
                             out_path=data.get('out_path'),

@@ -58,6 +58,11 @@ export default defineComponent({
       else await contacts.fetchAll({ group_id: id })
     }
 
+    async function toggleFavorite(e, c) {
+      e.stopPropagation()
+      await contacts.toggleFavorite(c.id)
+    }
+
     const nodeFiltered = computed(() =>
       nodes.activeNodeId
         ? contacts.contacts.filter((c) => c.node_id === nodes.activeNodeId)
@@ -73,6 +78,9 @@ export default defineComponent({
         )
       }
       return [...list].sort((a, b) => {
+        // Favorites always bubble to the top regardless of sort
+        if (a.favorite && !b.favorite) return -1
+        if (!a.favorite && b.favorite) return 1
         let va = a[sortKey.value] ?? ''
         let vb = b[sortKey.value] ?? ''
         if (sortKey.value === 'last_heard') {
@@ -112,7 +120,7 @@ export default defineComponent({
 
     return {
       contacts, nodes, groups, search, sortKey, sortAsc, activeGroupId,
-      filtered, nodeFiltered, sort, selectGroup, unread, avatarStyle, fmtTime, open,
+      filtered, nodeFiltered, sort, selectGroup, toggleFavorite, unread, avatarStyle, fmtTime, open,
       TYPE_META,
     }
   },
@@ -228,6 +236,10 @@ export default defineComponent({
             </div>
 
             <div class="flex items-center gap-2 flex-shrink-0">
+              <button
+                @click.stop="toggleFavorite($event, c)"
+                :class="['transition-colors', c.favorite ? 'text-amber-400' : 'text-zinc-700 hover:text-amber-500']"
+              ><Icon name="star" :size="15" /></button>
               <span class="text-xs text-zinc-600">{{ fmtTime(c.last_heard) }}</span>
               <Icon name="chevron-right" :size="15" class="text-zinc-700" />
             </div>

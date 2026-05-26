@@ -5,6 +5,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _apply_migrations(db) -> None:
+    """Add new columns to existing DB tables without Alembic."""
+    with db.engine.connect() as conn:
+        result = conn.execute(db.text('PRAGMA table_info(contacts)'))
+        existing = {row[1] for row in result}
+        for col_name, col_def in [
+            ('last_heard', 'DATETIME'),
+            ('favorite', 'BOOLEAN NOT NULL DEFAULT 0'),
+        ]:
+            if col_name not in existing:
+                conn.execute(db.text(f'ALTER TABLE contacts ADD COLUMN {col_name} {col_def}'))
+        conn.commit()
+
+
 def create_app(config_name: str | None = None) -> Flask:
     if config_name is None:
         config_name = os.environ.get('FLASK_ENV', 'default')
@@ -28,6 +42,7 @@ def create_app(config_name: str | None = None) -> Flask:
     with app.app_context():
         from .db import models  # noqa: F401 — registers models with SQLAlchemy
         db.create_all()
+        _apply_migrations(db)
 
     from .node.manager import node_manager
     node_manager.start(app)

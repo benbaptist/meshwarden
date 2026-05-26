@@ -59,10 +59,6 @@ devices:
   - /dev/ttyUSB0:/dev/ttyUSB0
 ```
 
-## License
-
-MIT
-
 ## Notice of Sloppy Slops
 
 This project is pretty much entirely vibe-coded. It's one of the rare times I ever do it, but it's fun to check in every now and then and see what the current state of LLMs is at and how in/competent it is. As of writing this, I've done this mostly with Claude Sonnet 4.6 set to High on Github Copilot. 
