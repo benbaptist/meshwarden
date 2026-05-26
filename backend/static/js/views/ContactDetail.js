@@ -508,7 +508,7 @@ export default defineComponent({
                 <div class="flex flex-wrap gap-x-4 gap-y-1">
                   <template v-for="(val, key) in rec.lpp_data" :key="key">
                     <div class="text-xs">
-                      <span class="text-zinc-600 capitalize">{{ key.replace(/_/g, ' ') }}</span>
+                      <span class="text-zinc-600 capitalize">{{ String(key).replace(/_/g, ' ') }}</span>
                       <span class="text-zinc-300 ml-1.5">{{ typeof val === 'object' ? JSON.stringify(val) : val }}</span>
                     </div>
                   </template>

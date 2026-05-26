@@ -40,6 +40,8 @@ export default defineComponent({
     const removeBeforeEach = router.beforeEach((to) => {
       if (!to.meta.auth) return
       navError.value = null
+      clearTimeout(loadingTimer)
+      showLoading.value = false
       loadingTimer = setTimeout(() => { showLoading.value = true }, 500)
     })
 
