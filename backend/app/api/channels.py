@@ -22,13 +22,15 @@ def list_channels():
         channels = []
         for idx in range(8):
             event = await mc.commands.get_channel(idx)
-            if event and event.type == EventType.CHANNEL_INFO:
+            if not event or event.type != EventType.CHANNEL_INFO:
+                break
+            name = (event.payload.get('channel_name') or '').strip()
+            # Channel 0 is always Public; skip higher indices with no configured name
+            if idx == 0 or name:
                 channels.append({
                     'channel_idx': event.payload['channel_idx'],
-                    'channel_name': event.payload['channel_name'],
+                    'channel_name': name,
                 })
-            else:
-                break
         return channels
 
     try:
