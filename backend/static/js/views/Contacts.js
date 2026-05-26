@@ -39,6 +39,7 @@ export default defineComponent({
 
     const search = ref('')
     const pingingId = ref(null)
+    const pingResults = ref({})
 
     onMounted(async () => {
       if (!contacts.contacts.length) {
@@ -61,8 +62,12 @@ export default defineComponent({
       e.stopPropagation()
       if (pingingId.value) return
       pingingId.value = c.id
+      pingResults.value = { ...pingResults.value, [c.id]: null }
       try {
-        await contacts.ping(c.id)
+        const res = await contacts.ping(c.id)
+        pingResults.value = { ...pingResults.value, [c.id]: { success: res.success, latency_ms: res.latency_ms } }
+      } catch {
+        pingResults.value = { ...pingResults.value, [c.id]: { success: false, latency_ms: null } }
       } finally {
         pingingId.value = null
       }
@@ -119,7 +124,7 @@ export default defineComponent({
     function open(c) { router.push(`/contacts/${c.id}`) }
 
     return {
-      contacts, nodes, groups, search, pingingId,
+      contacts, nodes, groups, search, pingingId, pingResults,
       filtered, nodeFiltered, selectGroup, toggleFavorite, doPing, openAdmin,
       unread, avatarStyle, fmtTime, open,
       TYPE_META,
@@ -219,14 +224,19 @@ export default defineComponent({
             </div>
 
             <!-- Action buttons (hidden on narrow viewports) -->
-            <div class="hidden sm:flex items-center gap-0.5 flex-shrink-0">
-              <button
-                v-if="c.contact_type_name === 'REP' || c.contact_type_name === 'SENS'"
-                @click.stop="doPing($event, c)"
-                :disabled="pingingId === c.id"
-                title="Ping"
-                class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-zinc-600 hover:text-cyan-400 hover:bg-cyan-500/10 disabled:opacity-40"
-              ><Icon name="signal" :size="15" /></button>
+            <div class="hidden sm:flex items-center gap-1 flex-shrink-0">
+              <template v-if="c.contact_type_name === 'REP' || c.contact_type_name === 'SENS'">
+                <button
+                  @click.stop="doPing($event, c)"
+                  :disabled="pingingId === c.id"
+                  title="Ping"
+                  :class="['w-8 h-8 flex items-center justify-center rounded-lg transition-colors disabled:opacity-40', pingingId === c.id ? 'text-cyan-400 animate-pulse' : 'text-zinc-600 hover:text-cyan-400 hover:bg-cyan-500/10']"
+                ><Icon name="signal" :size="15" /></button>
+                <span
+                  v-if="pingResults[c.id] !== undefined && pingResults[c.id] !== null"
+                  :class="['text-xs font-mono tabular-nums', pingResults[c.id].success ? 'text-cyan-300' : 'text-rose-400']"
+                >{{ pingResults[c.id].success ? pingResults[c.id].latency_ms + 'ms' : 'timeout' }}</span>
+              </template>
               <button
                 v-if="c.contact_type_name === 'REP'"
                 @click.stop="openAdmin($event, c)"
