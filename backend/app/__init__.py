@@ -55,6 +55,7 @@ def create_app(config_name: str | None = None) -> Flask:
     from .api.contacts import contacts_bp
     from .api.messages import messages_bp
     from .api.groups import groups_bp
+    from .api.channels import channels_bp
     from .socket.handlers import register_handlers
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -62,6 +63,7 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(contacts_bp, url_prefix='/api/contacts')
     app.register_blueprint(messages_bp, url_prefix='/api/messages')
     app.register_blueprint(groups_bp, url_prefix='/api/groups')
+    app.register_blueprint(channels_bp, url_prefix='/api/channels')
     register_handlers(socketio)
 
     # Serve manifest + SW at root scope (required for PWA)

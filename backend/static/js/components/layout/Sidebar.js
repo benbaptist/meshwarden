@@ -5,9 +5,10 @@ import { useMessagesStore } from '../../stores/messages.js'
 import NodeSwitcher from './NodeSwitcher.js'
 
 const NAV = [
-  { path: '/',         label: 'Map',      icon: 'map' },
-  { path: '/contacts', label: 'Contacts', icon: 'users' },
-  { path: '/settings', label: 'Settings', icon: 'cog' },
+  { path: '/',          label: 'Map',      icon: 'map' },
+  { path: '/contacts',  label: 'Contacts', icon: 'users' },
+  { path: '/channels',  label: 'Channels', icon: 'hashtag' },
+  { path: '/settings',  label: 'Settings', icon: 'cog' },
 ]
 
 export default defineComponent({
