@@ -3,7 +3,7 @@ services:
     build:
       context: ./backend
     ports:
-      - "5001:5000"
+      - "${HOST_PORT:-5001}:${PORT:-5000}"
     volumes:
       - ./data:/data
     env_file:
