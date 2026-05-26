@@ -36,7 +36,13 @@ export default defineComponent({
 
     onMounted(() => nextTick(scrollToBottom))
 
-    return { text, threadRef, sortedThread, send, onKeydown }
+    function parseChanMsg(text) {
+      const sep = text.indexOf(': ')
+      if (sep > 0 && sep < 50) return { sender: text.slice(0, sep), body: text.slice(sep + 2) }
+      return { sender: null, body: text }
+    }
+
+    return { text, threadRef, sortedThread, send, onKeydown, parseChanMsg }
   },
   template: `
     <div class="flex flex-col flex-1 min-h-0">
@@ -57,7 +63,9 @@ export default defineComponent({
             :class="['max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed', msg.direction === 'out' ? 'rounded-br-md' : 'rounded-bl-md glass']"
             :style="msg.direction === 'out' ? 'background: linear-gradient(135deg, #7c3aed, #9333ea); color: white;' : 'color: #e4e4e7;'"
           >
-            <div>{{ msg.text }}</div>
+            <div v-if="msg.direction === 'in' && msg.msg_type === 'channel' && parseChanMsg(msg.text).sender"
+                 class="text-[11px] font-medium text-violet-300/70 mb-0.5">{{ parseChanMsg(msg.text).sender }}</div>
+            <div>{{ msg.direction === 'in' && msg.msg_type === 'channel' ? parseChanMsg(msg.text).body : msg.text }}</div>
             <div class="flex items-center gap-1.5 mt-1" :class="msg.direction === 'out' ? 'justify-end' : 'justify-start'">
               <span class="text-[10px] opacity-60">{{ new Date(msg.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
               <template v-if="msg.direction === 'out'">

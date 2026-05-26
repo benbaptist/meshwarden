@@ -2,16 +2,12 @@ import { defineComponent, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { useNodesStore } from '../stores/nodes.js'
-import { useContactsStore } from '../stores/contacts.js'
-import { useMessagesStore } from '../stores/messages.js'
 
 export default defineComponent({
   name: 'Login',
   setup() {
     const auth = useAuthStore()
     const nodes = useNodesStore()
-    const contacts = useContactsStore()
-    const messages = useMessagesStore()
     const router = useRouter()
 
     const username = ref('')
@@ -25,10 +21,6 @@ export default defineComponent({
       try {
         await auth.login(username.value, password.value)
         await nodes.fetchAll()
-        nodes.bindSocket()
-        contacts.fetchAll()
-        contacts.bindSocket()
-        messages.bindSocket()
         router.push('/')
       } catch {
         error.value = 'Invalid username or password'

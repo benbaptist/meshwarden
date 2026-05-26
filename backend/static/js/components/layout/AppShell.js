@@ -30,8 +30,10 @@ export default defineComponent({
       messages.bindSocket()
     }
 
-    onMounted(() => { if (auth.isAuthenticated) initStores() })
-    watch(() => auth.isAuthenticated, (val) => { if (val) initStores() })
+    // auth.user is only set after login() or restoreSession(), both of which
+    // call connectSocket() first — so the socket is guaranteed to exist here.
+    onMounted(() => { if (auth.user) initStores() })
+    watch(() => auth.user, (val) => { if (val) initStores() })
 
     const showLoading = ref(false)
     const navError = ref(null)

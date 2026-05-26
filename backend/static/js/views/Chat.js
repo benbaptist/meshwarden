@@ -126,9 +126,15 @@ export default defineComponent({
       if (!contacts.contacts.length) contacts.fetchAll()
     })
 
+    function parseChanMsg(text) {
+      const sep = text.indexOf(': ')
+      if (sep > 0 && sep < 50) return { sender: text.slice(0, sep), body: text.slice(sep + 2) }
+      return { sender: null, body: text }
+    }
+
     return {
       conversations, activeKey, activeConv, thread, text, sending, threadRef,
-      sendMessage, selectConv, relativeTime, contactForMsg, router,
+      sendMessage, selectConv, relativeTime, contactForMsg, router, parseChanMsg,
     }
   },
   template: `
@@ -222,7 +228,11 @@ export default defineComponent({
                   msg.direction === 'out'
                     ? 'bg-mesh-700 text-white rounded-br-sm'
                     : 'bg-gray-800 text-gray-100 rounded-bl-sm'
-                ]">{{ msg.text }}</div>
+                ]">
+                  <div v-if="msg.direction === 'in' && msg.msg_type === 'channel' && parseChanMsg(msg.text).sender"
+                       class="text-[11px] font-medium text-purple-400 mb-0.5">{{ parseChanMsg(msg.text).sender }}</div>
+                  <div>{{ msg.direction === 'in' && msg.msg_type === 'channel' ? parseChanMsg(msg.text).body : msg.text }}</div>
+                </div>
                 <div class="flex items-center gap-2 px-1">
                   <span class="text-xs text-gray-600">{{ relativeTime(msg.timestamp) }}</span>
                   <SignalBadge v-if="msg.snr != null" :snr="msg.snr" :rssi="msg.rssi" />
