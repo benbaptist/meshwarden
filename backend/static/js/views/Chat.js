@@ -226,10 +226,14 @@ export default defineComponent({
                 <div class="flex items-center gap-2 px-1">
                   <span class="text-xs text-gray-600">{{ relativeTime(msg.timestamp) }}</span>
                   <SignalBadge v-if="msg.snr != null" :snr="msg.snr" :rssi="msg.rssi" />
-                  <span v-if="msg.direction === 'out'" class="flex items-center text-gray-600">
-                    <Icon v-if="msg.status === 'acked'" name="check-circle" :size="12" />
+                  <span
+                    v-if="msg.direction === 'out'"
+                    :title="msg.status === 'acked' ? 'Received by destination' : msg.status === 'sent' ? 'Seen by mesh' : msg.status === 'failed' ? 'Failed to send' : 'Sending…'"
+                    class="flex items-center text-gray-600"
+                  >
+                    <Icon v-if="msg.status === 'failed'" name="x-circle" :size="12" class="text-red-500" />
+                    <Icon v-else-if="msg.status === 'acked'" name="check-circle" :size="12" />
                     <Icon v-else-if="msg.status === 'sent'" name="check" :size="12" />
-                    <Icon v-else-if="msg.status === 'failed'" name="x-circle" :size="12" class="text-red-500" />
                     <Icon v-else name="clock" :size="12" />
                   </span>
                 </div>

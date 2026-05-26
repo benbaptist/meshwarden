@@ -239,7 +239,7 @@ export default defineComponent({
               <button
                 @click.stop="toggleFavorite($event, c)"
                 :class="['transition-colors', c.favorite ? 'text-amber-400' : 'text-zinc-700 hover:text-amber-500']"
-              ><Icon name="star" :size="15" /></button>
+              ><Icon :name="c.favorite ? 'star-solid' : 'star'" :size="15" /></button>
               <span class="text-xs text-zinc-600">{{ fmtTime(c.last_heard) }}</span>
               <Icon name="chevron-right" :size="15" class="text-zinc-700" />
             </div>

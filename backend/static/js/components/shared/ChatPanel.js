@@ -61,9 +61,15 @@ export default defineComponent({
             <div class="flex items-center gap-1.5 mt-1" :class="msg.direction === 'out' ? 'justify-end' : 'justify-start'">
               <span class="text-[10px] opacity-60">{{ new Date(msg.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
               <template v-if="msg.direction === 'out'">
-                <Icon v-if="msg.status === 'acked'" name="check-circle" :size="11" class="opacity-70" />
-                <Icon v-else-if="msg.status === 'sent'" name="check" :size="11" class="opacity-50" />
-                <Icon v-else name="clock" :size="11" class="opacity-40" />
+                <span
+                  :title="msg.status === 'acked' ? 'Received by destination' : msg.status === 'sent' ? 'Seen by mesh' : msg.status === 'failed' ? 'Failed to send' : 'Sending…'"
+                  class="inline-flex items-center"
+                >
+                  <Icon v-if="msg.status === 'failed'" name="x-circle" :size="11" class="text-rose-400" />
+                  <Icon v-else-if="msg.status === 'acked'" name="check-circle" :size="11" class="opacity-70" />
+                  <Icon v-else-if="msg.status === 'sent'" name="check" :size="11" class="opacity-50" />
+                  <Icon v-else name="clock" :size="11" class="opacity-40" />
+                </span>
               </template>
             </div>
           </div>
@@ -78,7 +84,7 @@ export default defineComponent({
         <textarea
           v-model="text"
           @keydown="onKeydown"
-          placeholder="Message… (Enter to send)"
+          placeholder="Message…"
           rows="1"
           class="flex-1 resize-none px-3.5 py-2.5 rounded-2xl text-sm text-zinc-100 placeholder-zinc-600 outline-none max-h-32 overflow-y-auto"
           style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);"
