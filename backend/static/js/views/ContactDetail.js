@@ -95,6 +95,7 @@ export default defineComponent({
         await Promise.all(fetches)
         await nextTick()
         scrollThread()
+        renderSignalChart()
       } catch {
         toast.error('Failed to load contact')
       }
@@ -214,6 +215,7 @@ export default defineComponent({
     }
 
     function renderSignalChart() {
+      if (signalChart) return
       const el = document.getElementById('signal-chart')
       if (!el || !signal.value.length || typeof ApexCharts === 'undefined') return
       const data = signal.value.slice().reverse()
@@ -295,27 +297,6 @@ export default defineComponent({
             >{{ TYPE_META[contact.contact_type_name]?.label || contact.contact_type_name }}</span>
           </div>
 
-          <!-- Action buttons -->
-          <div class="flex items-center gap-1.5 flex-shrink-0">
-            <template v-if="isRepeater">
-              <button
-                @click="ping"
-                :disabled="pinging"
-                title="Ping (zero hop)"
-                class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40"
-              ><Icon name="signal" :size="17" /></button>
-              <span
-                v-if="pingResult !== null"
-                :class="['text-xs font-mono tabular-nums', pingResult.success ? 'text-cyan-300' : 'text-rose-400']"
-              >{{ pingResult.success ? pingResult.latency_ms + 'ms' : 'timeout' }}</span>
-            </template>
-            <button
-              @click="toggleFavorite"
-              :class="['w-8 h-8 flex items-center justify-center rounded-lg transition-colors', contact.favorite ? 'text-amber-400' : 'text-zinc-600 hover:text-amber-500']"
-              title="Favorite"
-            ><Icon name="star" :size="17" /></button>
-          </div>
-
           <!-- Tab switcher (mobile) -->
           <div class="flex gap-1 md:hidden" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 3px;">
             <button
@@ -348,6 +329,25 @@ export default defineComponent({
               <div class="text-base font-bold text-white">{{ contact.adv_name || 'Unknown' }}</div>
               <div v-if="contact.short_name" class="text-xs text-zinc-500 mt-0.5">{{ contact.short_name }}</div>
               <div class="text-[10px] text-zinc-700 font-mono mt-1 break-all">{{ contact.public_key }}</div>
+              <div class="flex items-center gap-2 mt-3">
+                <template v-if="isRepeater">
+                  <button
+                    @click="ping"
+                    :disabled="pinging"
+                    title="Ping (zero hop)"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40"
+                  ><Icon name="signal" :size="17" /></button>
+                  <span
+                    v-if="pingResult !== null"
+                    :class="['text-xs font-mono tabular-nums', pingResult.success ? 'text-cyan-300' : 'text-rose-400']"
+                  >{{ pingResult.success ? pingResult.latency_ms + 'ms' : 'timeout' }}</span>
+                </template>
+                <button
+                  @click="toggleFavorite"
+                  :class="['w-8 h-8 flex items-center justify-center rounded-lg transition-colors', contact.favorite ? 'text-amber-400' : 'text-zinc-600 hover:text-amber-500']"
+                  title="Favorite"
+                ><Icon :name="contact.favorite ? 'star-solid' : 'star'" :size="17" /></button>
+              </div>
             </div>
 
             <!-- Fields -->
@@ -487,11 +487,12 @@ export default defineComponent({
             </div>
           </div>
 
-          <!-- Activity panel: mobile only -->
+          <!-- Activity panel: mobile tab, always on desktop -->
           <div
             :class="[
-              'flex-col flex-1 overflow-y-auto scrollbar-none px-4 py-4 space-y-3',
-              activeTab === 'activity' ? 'flex' : 'hidden'
+              'flex-col overflow-y-auto scrollbar-none px-4 py-4 space-y-3',
+              'md:flex md:flex-none md:w-64 md:flex-shrink-0 md:border-r md:border-white/[0.05]',
+              activeTab === 'activity' ? 'flex flex-1' : 'hidden'
             ]"
           >
             <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-1">Signal History</div>
