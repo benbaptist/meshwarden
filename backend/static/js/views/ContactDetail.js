@@ -3,6 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useContactsStore } from '../stores/contacts.js'
 import { useMessagesStore } from '../stores/messages.js'
 import { useNodesStore } from '../stores/nodes.js'
+import { useGroupsStore } from '../stores/groups.js'
 import { useToast } from '../components/shared/Toast.js'
 
 const TYPE_META = {
@@ -29,6 +30,7 @@ export default defineComponent({
     const contacts = useContactsStore()
     const messages = useMessagesStore()
     const nodes = useNodesStore()
+    const groupsStore = useGroupsStore()
     const toast = useToast()
 
     const contactId = Number(route.params.id)
@@ -40,7 +42,9 @@ export default defineComponent({
     const telemetry = ref([])
     const activeTab = ref(['chat', 'info', 'activity'].includes(route.query.tab) ? route.query.tab : 'chat')
     const sending = ref(false)
-    const newTag = ref('')
+    const contactGroups = ref([])
+    const newGroupName = ref('')
+    const selectedGroupId = ref('')
     const pinging = ref(false)
     const pingResult = ref(null)  // null | { success, latency_ms }
     const pings = ref([])
@@ -55,6 +59,9 @@ export default defineComponent({
 
     const isRepeater = computed(() => contact.value?.contact_type_name === 'REP')
     const isSensor = computed(() => contact.value?.contact_type_name === 'SENS')
+    const availableGroups = computed(() =>
+      groupsStore.groups.filter((g) => !contactGroups.value.find((cg) => cg.id === g.id))
+    )
 
     // Parse out_path hex into 4-byte hops, try to match to known contacts
     const pathHops = computed(() => {
@@ -84,6 +91,7 @@ export default defineComponent({
           contacts.fetchHistory(contactId).then((d) => { history.value = d }),
           contacts.fetchSignal(contactId).then((d) => { signal.value = d }),
           contacts.fetchPings(contactId).then((d) => { pings.value = d }),
+          contacts.fetchContactGroups(contactId).then((d) => { contactGroups.value = d }),
           messages.fetchThread(threadKey, { contact_id: contactId, msg_type: 'direct' }),
         ]
         if (contact.value?.contact_type_name === 'REP' || contact.value?.contact_type_name === 'SENS') {
@@ -114,17 +122,38 @@ export default defineComponent({
       }
     }
 
-    async function addTag() {
-      if (!newTag.value.trim() || !contact.value) return
-      const tags = [...contact.value.tags, newTag.value.trim()]
-      contact.value = await contacts.update(contactId, { tags })
-      newTag.value = ''
+    async function addToGroup(groupId) {
+      if (!groupId) return
+      try {
+        await groupsStore.addMember(Number(groupId), contactId)
+        contactGroups.value = await contacts.fetchContactGroups(contactId)
+        selectedGroupId.value = ''
+      } catch (e) {
+        toast.error(e.message || 'Failed to add to group')
+      }
     }
 
-    async function removeTag(tag) {
-      if (!contact.value) return
-      const tags = contact.value.tags.filter((t) => t !== tag)
-      contact.value = await contacts.update(contactId, { tags })
+    async function createAndAddToGroup() {
+      if (!newGroupName.value.trim()) return
+      try {
+        const group = await groupsStore.create({ name: newGroupName.value.trim() })
+        await groupsStore.addMember(group.id, contactId)
+        contactGroups.value = await contacts.fetchContactGroups(contactId)
+        await groupsStore.fetchAll()
+        newGroupName.value = ''
+      } catch (e) {
+        toast.error(e.message || 'Failed to create group')
+      }
+    }
+
+    async function removeFromGroup(groupId) {
+      try {
+        await groupsStore.removeMember(groupId, contactId)
+        contactGroups.value = contactGroups.value.filter((g) => g.id !== groupId)
+        await groupsStore.fetchAll()
+      } catch (e) {
+        toast.error(e.message || 'Failed to remove from group')
+      }
     }
 
     async function toggleFavorite() {
@@ -238,15 +267,15 @@ export default defineComponent({
       return `linear-gradient(135deg, ${from}, ${to})`
     }
 
-    onMounted(load)
+    onMounted(() => { load(); groupsStore.fetchAll() })
     onBeforeUnmount(() => { if (signalChart) signalChart.destroy() })
 
     return {
       contact, history, signal, telemetry, pings, thread,
-      activeTab, sending, newTag,
+      activeTab, sending, contactGroups, newGroupName, selectedGroupId, availableGroups,
       pinging, pingResult, adminPassword, adminLoggingIn, loggedIn, newPath, settingPath,
       isRepeater, isSensor, pathHops,
-      sendMsg, addTag, removeTag, toggleFavorite,
+      sendMsg, addToGroup, createAndAddToGroup, removeFromGroup, toggleFavorite,
       ping, doResetPath, doSetPath, doLogin, doRequestTelemetry,
       fmtTime, avatarStyle, router, TYPE_META,
     }
@@ -386,33 +415,51 @@ export default defineComponent({
               </form>
             </div>
 
-            <!-- Tags -->
+            <!-- Groups -->
             <div class="px-5 py-4 border-b border-white/[0.04]">
-              <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-2">Tags</div>
+              <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-2">Groups</div>
               <div class="flex flex-wrap gap-1.5 mb-3">
                 <span
-                  v-for="tag in contact.tags"
-                  :key="tag"
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-zinc-800 text-zinc-300 border border-white/[0.06]"
+                  v-for="group in contactGroups"
+                  :key="group.id"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border"
+                  :style="{ background: group.color + '22', borderColor: group.color + '44', color: group.color }"
                 >
-                  {{ tag }}
-                  <button @click="removeTag(tag)" class="text-zinc-600 hover:text-rose-400 transition-colors">&times;</button>
+                  {{ group.name }}
+                  <button @click="removeFromGroup(group.id)" class="opacity-60 hover:opacity-100 transition-opacity">&times;</button>
                 </span>
-                <span v-if="!contact.tags?.length" class="text-xs text-zinc-700">None</span>
+                <span v-if="!contactGroups.length" class="text-xs text-zinc-700">No groups</span>
               </div>
-              <form @submit.prevent="addTag" class="flex gap-2">
+              <div v-if="availableGroups.length" class="flex gap-2 mb-2">
+                <select
+                  v-model="selectedGroupId"
+                  class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 outline-none"
+                  style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
+                >
+                  <option value="" disabled>Add to existing group…</option>
+                  <option v-for="g in availableGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+                </select>
+                <button
+                  @click="addToGroup(selectedGroupId)"
+                  :disabled="!selectedGroupId"
+                  class="px-3 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40"
+                  style="background: rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.4);"
+                >Add</button>
+              </div>
+              <form @submit.prevent="createAndAddToGroup" class="flex gap-2">
                 <input
-                  v-model="newTag"
+                  v-model="newGroupName"
                   type="text"
-                  placeholder="Add tag…"
+                  placeholder="New group name…"
                   class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none"
                   style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
                 />
                 <button
                   type="submit"
-                  class="px-3 py-1.5 rounded-lg text-xs text-white transition-colors"
+                  :disabled="!newGroupName.trim()"
+                  class="px-3 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40"
                   style="background: rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.4);"
-                >Add</button>
+                >Create</button>
               </form>
             </div>
 

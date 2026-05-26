@@ -46,8 +46,6 @@ def update_contact(contact_id: int):
         return jsonify({'error': 'Contact not found'}), 404
 
     data = request.get_json(silent=True) or {}
-    if 'tags' in data and isinstance(data['tags'], list):
-        contact.set_tags(data['tags'])
     if 'notes' in data:
         contact.notes = str(data['notes'])[:4096]
     if 'favorite' in data:
@@ -55,6 +53,15 @@ def update_contact(contact_id: int):
 
     db.session.commit()
     return jsonify(contact.to_dict())
+
+
+@contacts_bp.get('/<int:contact_id>/groups')
+@require_auth
+def contact_groups(contact_id: int):
+    contact = db.session.get(Contact, contact_id)
+    if not contact:
+        return jsonify({'error': 'Contact not found'}), 404
+    return jsonify([m.group.to_dict() for m in contact.group_memberships])
 
 
 @contacts_bp.get('/<int:contact_id>/history')

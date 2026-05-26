@@ -127,6 +127,12 @@ def remove_member(group_id: int, contact_id: int):
         return jsonify({'error': 'Membership not found'}), 404
 
     db.session.delete(membership)
+    db.session.flush()
+    remaining = db.session.execute(
+        db.select(GroupMembership).filter_by(group_id=group_id)
+    ).scalars().all()
+    if not remaining:
+        db.session.delete(db.session.get(Group, group_id))
     db.session.commit()
     return jsonify({'ok': True})
 

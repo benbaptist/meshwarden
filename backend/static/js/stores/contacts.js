@@ -97,6 +97,10 @@ export const useContactsStore = defineStore('contacts', () => {
     })
   }
 
+  async function fetchContactGroups(id) {
+    return api.json(`/api/contacts/${id}/groups`)
+  }
+
   function bindSocket() {
     const socket = getSocket()
     if (!socket) return
@@ -117,7 +121,7 @@ export const useContactsStore = defineStore('contacts', () => {
     contacts, loading, activeGroupId,
     fetchAll, fetchOne, update, fetchHistory, fetchTelemetry,
     fetchMessages, fetchSignal, requestTelemetry, fetchPings,
-    toggleFavorite, ping, resetPath, setPath, loginContact,
+    toggleFavorite, ping, resetPath, setPath, loginContact, fetchContactGroups,
     bindSocket,
   }
 })

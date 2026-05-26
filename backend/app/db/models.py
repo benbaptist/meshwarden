@@ -126,7 +126,6 @@ class Contact(db.Model):
     out_path: Mapped[str | None] = mapped_column(String(256), nullable=True)
     last_heard: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     favorite: Mapped[bool] = mapped_column(Boolean, default=False, server_default='0')
-    tags: Mapped[str] = mapped_column(Text, default='[]')   # JSON array of strings
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
@@ -145,15 +144,6 @@ class Contact(db.Model):
         'GroupMembership', back_populates='contact', cascade='all, delete-orphan'
     )
 
-    def get_tags(self) -> list:
-        try:
-            return json.loads(self.tags)
-        except (json.JSONDecodeError, TypeError):
-            return []
-
-    def set_tags(self, tags: list) -> None:
-        self.tags = json.dumps(tags)
-
     CONTACT_TYPES = {0: 'NONE', 1: 'CLI', 2: 'REP', 3: 'ROOM', 4: 'SENS'}
 
     def to_dict(self) -> dict:
@@ -170,7 +160,6 @@ class Contact(db.Model):
             'lat': self.lat,
             'lon': self.lon,
             'out_path': self.out_path,
-            'tags': self.get_tags(),
             'notes': self.notes,
         }
 
