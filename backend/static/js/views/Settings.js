@@ -203,23 +203,6 @@ export default defineComponent({
           </form>
         </div>
       </section>
-
-      <!-- ── Session section ── -->
-      <section>
-        <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-3">Session</div>
-        <div class="glass rounded-2xl p-5">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-sm text-zinc-300 font-medium">Signed in as</div>
-              <div class="text-xs text-zinc-600 mt-0.5">{{ auth.user?.username }}</div>
-            </div>
-            <button
-              @click="auth.logout()"
-              class="px-4 py-2 rounded-xl text-sm text-rose-400 border border-rose-500/20 hover:bg-rose-500/10 transition-all"
-            >Sign out</button>
-          </div>
-        </div>
-      </section>
     </div>
 
     <!-- Node add/edit modal -->
