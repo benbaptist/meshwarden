@@ -38,7 +38,7 @@ export default defineComponent({
     const history = ref([])
     const signal = ref([])
     const telemetry = ref([])
-    const activeTab = ref('chat')
+    const activeTab = ref(['chat', 'info', 'activity'].includes(route.query.tab) ? route.query.tab : 'chat')
     const sending = ref(false)
     const newTag = ref('')
     const pinging = ref(false)

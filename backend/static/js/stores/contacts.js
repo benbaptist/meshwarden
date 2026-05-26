@@ -6,6 +6,7 @@ import { getSocket } from '../socket.js'
 export const useContactsStore = defineStore('contacts', () => {
   const contacts = ref([])
   const loading = ref(false)
+  const activeGroupId = ref(null)
 
   async function fetchAll(params = {}) {
     loading.value = true
@@ -113,7 +114,7 @@ export const useContactsStore = defineStore('contacts', () => {
   }
 
   return {
-    contacts, loading,
+    contacts, loading, activeGroupId,
     fetchAll, fetchOne, update, fetchHistory, fetchTelemetry,
     fetchMessages, fetchSignal, requestTelemetry, fetchPings,
     toggleFavorite, ping, resetPath, setPath, loginContact,

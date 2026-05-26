@@ -38,29 +38,39 @@ export default defineComponent({
     const groups = useGroupsStore()
 
     const search = ref('')
-    const sortKey = ref('adv_name')
-    const sortAsc = ref(true)
-    const activeGroupId = ref(null)
+    const pingingId = ref(null)
 
     onMounted(async () => {
-      if (!contacts.contacts.length) await contacts.fetchAll()
+      if (!contacts.contacts.length) {
+        await contacts.fetchAll(contacts.activeGroupId ? { group_id: contacts.activeGroupId } : {})
+      }
       if (!groups.groups.length) await groups.fetchAll()
     })
 
-    function sort(key) {
-      if (sortKey.value === key) { sortAsc.value = !sortAsc.value }
-      else { sortKey.value = key; sortAsc.value = true }
-    }
-
     async function selectGroup(id) {
-      activeGroupId.value = id
-      if (id === null) await contacts.fetchAll()
-      else await contacts.fetchAll({ group_id: id })
+      contacts.activeGroupId = id
+      await contacts.fetchAll(id !== null ? { group_id: id } : {})
     }
 
     async function toggleFavorite(e, c) {
       e.stopPropagation()
       await contacts.toggleFavorite(c.id)
+    }
+
+    async function doPing(e, c) {
+      e.stopPropagation()
+      if (pingingId.value) return
+      pingingId.value = c.id
+      try {
+        await contacts.ping(c.id)
+      } finally {
+        pingingId.value = null
+      }
+    }
+
+    function openAdmin(e, c) {
+      e.stopPropagation()
+      router.push(`/contacts/${c.id}?tab=info`)
     }
 
     const nodeFiltered = computed(() =>
@@ -78,21 +88,11 @@ export default defineComponent({
         )
       }
       return [...list].sort((a, b) => {
-        // Favorites always bubble to the top regardless of sort
         if (a.favorite && !b.favorite) return -1
         if (!a.favorite && b.favorite) return 1
-        let va = a[sortKey.value] ?? ''
-        let vb = b[sortKey.value] ?? ''
-        if (sortKey.value === 'last_heard') {
-          va = va ? new Date(va).getTime() : 0
-          vb = vb ? new Date(vb).getTime() : 0
-        } else {
-          va = String(va).toLowerCase()
-          vb = String(vb).toLowerCase()
-        }
-        if (va < vb) return sortAsc.value ? -1 : 1
-        if (va > vb) return sortAsc.value ? 1 : -1
-        return 0
+        const ta = a.last_heard ? new Date(a.last_heard).getTime() : 0
+        const tb = b.last_heard ? new Date(b.last_heard).getTime() : 0
+        return tb - ta
       })
     })
 
@@ -107,7 +107,7 @@ export default defineComponent({
     }
 
     function fmtTime(ts) {
-      if (!ts) return '—'
+      if (!ts) return null
       const d = new Date(ts)
       const diff = (Date.now() - d) / 1000
       if (diff < 60) return 'now'
@@ -119,74 +119,52 @@ export default defineComponent({
     function open(c) { router.push(`/contacts/${c.id}`) }
 
     return {
-      contacts, nodes, groups, search, sortKey, sortAsc, activeGroupId,
-      filtered, nodeFiltered, sort, selectGroup, toggleFavorite, unread, avatarStyle, fmtTime, open,
+      contacts, nodes, groups, search, pingingId,
+      filtered, nodeFiltered, selectGroup, toggleFavorite, doPing, openAdmin,
+      unread, avatarStyle, fmtTime, open,
       TYPE_META,
     }
   },
   template: `
     <div class="h-full flex flex-col">
-      <!-- Header -->
-      <div class="flex-shrink-0 px-4 pt-5 pb-3 border-b border-white/[0.06]" style="background: rgba(9,9,15,0.6); backdrop-filter: blur(12px);">
-        <h1 class="text-lg font-bold text-white mb-3">Contacts</h1>
-
-        <!-- Search -->
-        <div class="relative mb-3">
-          <Icon name="users" :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+      <!-- Header (matches Channels style) -->
+      <div class="px-4 py-4 border-b border-white/[0.06] flex items-center gap-3 flex-shrink-0">
+        <Icon name="users" :size="18" class="text-zinc-500 flex-shrink-0" />
+        <h1 class="text-sm font-semibold text-zinc-100">Contacts</h1>
+        <div class="relative flex-1 max-w-xs ml-auto">
+          <Icon name="magnifying-glass" :size="13" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" />
           <input
             v-model="search"
             type="text"
-            placeholder="Search contacts…"
-            class="w-full pl-9 pr-3 py-2 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none transition-all"
+            placeholder="Search…"
+            class="w-full pl-7 pr-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none transition-all"
             style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
           />
         </div>
-
-        <!-- Group filter chips -->
-        <div v-if="groups.groups.length" class="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
-          <button
-            @click="selectGroup(null)"
-            :class="[
-              'flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all border',
-              activeGroupId === null
-                ? 'bg-violet-500/20 text-violet-300 border-violet-500/30'
-                : 'text-zinc-500 border-white/[0.08] hover:text-zinc-300 hover:border-white/[0.15]'
-            ]"
-          >All</button>
-          <button
-            v-for="g in groups.groups"
-            :key="g.id"
-            @click="selectGroup(g.id)"
-            :class="[
-              'flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all border',
-              activeGroupId === g.id
-                ? 'bg-violet-500/20 text-violet-300 border-violet-500/30'
-                : 'text-zinc-500 border-white/[0.08] hover:text-zinc-300 hover:border-white/[0.15]'
-            ]"
-          >{{ g.name }}</button>
-        </div>
       </div>
 
-      <!-- Sort bar — hidden on mobile -->
-      <div class="hidden sm:flex flex-shrink-0 px-4 py-2 border-b border-white/[0.04] text-xs text-zinc-600">
-        <div class="flex-1">
-          <button @click="sort('adv_name')" class="flex items-center gap-1 hover:text-zinc-400 transition-colors">
-            Name
-            <Icon v-if="sortKey==='adv_name'" :name="sortAsc ? 'chevron-up' : 'chevron-down'" :size="11" class="text-violet-400" />
-          </button>
-        </div>
-        <div class="w-24">
-          <button @click="sort('contact_type_name')" class="flex items-center gap-1 hover:text-zinc-400 transition-colors">
-            Type
-            <Icon v-if="sortKey==='contact_type_name'" :name="sortAsc ? 'chevron-up' : 'chevron-down'" :size="11" class="text-violet-400" />
-          </button>
-        </div>
-        <div class="w-20 text-right">
-          <button @click="sort('last_heard')" class="flex items-center gap-1 justify-end hover:text-zinc-400 transition-colors ml-auto">
-            Seen
-            <Icon v-if="sortKey==='last_heard'" :name="sortAsc ? 'chevron-up' : 'chevron-down'" :size="11" class="text-violet-400" />
-          </button>
-        </div>
+      <!-- Group filter chips -->
+      <div v-if="groups.groups.length" class="flex-shrink-0 flex gap-2 px-4 py-2 overflow-x-auto scrollbar-none border-b border-white/[0.04]">
+        <button
+          @click="selectGroup(null)"
+          :class="[
+            'flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all border',
+            contacts.activeGroupId === null
+              ? 'bg-violet-500/20 text-violet-300 border-violet-500/30'
+              : 'text-zinc-500 border-white/[0.08] hover:text-zinc-300 hover:border-white/[0.15]'
+          ]"
+        >All</button>
+        <button
+          v-for="g in groups.groups"
+          :key="g.id"
+          @click="selectGroup(g.id)"
+          :class="[
+            'flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all border',
+            contacts.activeGroupId === g.id
+              ? 'bg-violet-500/20 text-violet-300 border-violet-500/30'
+              : 'text-zinc-500 border-white/[0.08] hover:text-zinc-300 hover:border-white/[0.15]'
+          ]"
+        >{{ g.name }}</button>
       </div>
 
       <!-- List -->
@@ -210,42 +188,64 @@ export default defineComponent({
           <div class="text-sm text-zinc-500">Listening for contacts on the mesh…</div>
         </div>
 
-        <div v-else>
-          <button
+        <ul v-else>
+          <li
             v-for="c in filtered"
             :key="c.id"
             @click="open(c)"
-            class="w-full flex items-center gap-3.5 px-4 py-3.5 border-b border-white/[0.04] text-left transition-colors active:bg-white/[0.04] hover:bg-white/[0.03] min-h-[56px]"
+            class="flex items-center gap-3 px-4 min-h-[56px] border-b border-white/[0.04] cursor-pointer active:bg-white/[0.04] transition-colors hover:bg-white/[0.03]"
           >
+            <!-- Avatar -->
             <div
-              class="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 shadow-lg"
+              class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 shadow-lg relative"
               :style="{ background: avatarStyle(c) }"
-            >{{ (c.adv_name || c.short_name || '?')[0].toUpperCase() }}</div>
-
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-medium text-white truncate">{{ c.adv_name || c.short_name || 'Unknown' }}</span>
-                <span
-                  v-if="unread(c) > 0"
-                  class="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center"
-                >{{ unread(c) > 9 ? '9+' : unread(c) }}</span>
-              </div>
+            >
+              {{ (c.adv_name || c.short_name || '?')[0].toUpperCase() }}
               <span
-                :class="['mt-0.5 inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-md border', TYPE_META[c.contact_type_name]?.bg || TYPE_META.NONE.bg]"
-              >{{ TYPE_META[c.contact_type_name]?.label || c.contact_type_name }}</span>
+                v-if="unread(c) > 0"
+                class="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-violet-600 text-white text-[8px] font-bold flex items-center justify-center"
+              >{{ unread(c) > 9 ? '9+' : unread(c) }}</span>
             </div>
 
-            <div class="flex items-center gap-2 flex-shrink-0">
-              <button
-                @click.stop="toggleFavorite($event, c)"
-                :class="['transition-colors', c.favorite ? 'text-amber-400' : 'text-zinc-700 hover:text-amber-500']"
-              ><Icon :name="c.favorite ? 'star-solid' : 'star'" :size="15" /></button>
-              <span class="text-xs text-zinc-600">{{ fmtTime(c.last_heard) }}</span>
-              <Icon name="chevron-right" :size="15" class="text-zinc-700" />
+            <!-- Name + type pill + last seen -->
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-zinc-100 truncate">{{ c.adv_name || c.short_name || 'Unknown' }}</div>
+              <div class="flex items-center gap-1.5 mt-0.5">
+                <span :class="['text-[10px] font-medium px-1.5 py-0.5 rounded-md border leading-none', TYPE_META[c.contact_type_name]?.bg || TYPE_META.NONE.bg]">
+                  {{ TYPE_META[c.contact_type_name]?.label || c.contact_type_name }}
+                </span>
+                <span v-if="fmtTime(c.last_heard)" class="text-[10px] text-zinc-600">{{ fmtTime(c.last_heard) }}</span>
+              </div>
             </div>
-          </button>
-        </div>
+
+            <!-- Action buttons (hidden on narrow viewports) -->
+            <div class="hidden sm:flex items-center gap-0.5 flex-shrink-0">
+              <button
+                v-if="c.contact_type_name === 'REP' || c.contact_type_name === 'SENS'"
+                @click.stop="doPing($event, c)"
+                :disabled="pingingId === c.id"
+                title="Ping"
+                class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-zinc-600 hover:text-cyan-400 hover:bg-cyan-500/10 disabled:opacity-40"
+              ><Icon name="signal" :size="15" /></button>
+              <button
+                v-if="c.contact_type_name === 'REP'"
+                @click.stop="openAdmin($event, c)"
+                title="Admin"
+                class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-zinc-600 hover:text-violet-400 hover:bg-violet-500/10"
+              ><Icon name="cog" :size="15" /></button>
+            </div>
+
+            <!-- Fav (always visible) -->
+            <button
+              @click.stop="toggleFavorite($event, c)"
+              :class="['w-8 h-8 flex items-center justify-center rounded-lg transition-colors flex-shrink-0', c.favorite ? 'text-amber-400' : 'text-zinc-700 hover:text-amber-500']"
+            ><Icon :name="c.favorite ? 'star-solid' : 'star'" :size="15" /></button>
+
+            <Icon name="chevron-right" :size="14" class="text-zinc-700 flex-shrink-0" />
+          </li>
+        </ul>
       </div>
     </div>
   `,
 })
+
