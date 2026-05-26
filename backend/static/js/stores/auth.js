@@ -75,6 +75,8 @@ export const useAuthStore = defineStore('auth', () => {
     setAccessToken(null)
     user.value = null
     disconnectSocket()
+    const { default: router } = await import('../router.js')
+    router.push('/login')
   }
 
   // Try to restore session from stored token on page load
