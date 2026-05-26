@@ -263,62 +263,6 @@ export default defineComponent({
     }
   },
 
-    async function removeTag(tag) {
-      if (!contact.value) return
-      const tags = contact.value.tags.filter((t) => t !== tag)
-      contact.value = await contacts.update(contactId, { tags })
-    }
-
-    function renderSignalChart() {
-      const el = document.getElementById('signal-chart')
-      if (!el || !signal.value.length || typeof ApexCharts === 'undefined') return
-      const data = signal.value.slice().reverse()
-      signalChart = new ApexCharts(el, {
-        chart: { type: 'line', height: 160, background: 'transparent', toolbar: { show: false } },
-        theme: { mode: 'dark' },
-        series: [{ name: 'SNR (dB)', data: data.map((r) => ({ x: new Date(r.timestamp), y: r.snr })) }],
-        xaxis: { type: 'datetime', labels: { style: { colors: '#52525b', fontSize: '10px' } } },
-        yaxis: { labels: { style: { colors: '#52525b', fontSize: '10px' } } },
-        stroke: { width: 2, curve: 'smooth' },
-        colors: ['#a78bfa'],
-        grid: { borderColor: '#27272a' },
-        tooltip: { theme: 'dark' },
-      })
-      signalChart.render()
-    }
-
-    watch(activeTab, (tab) => {
-      if (tab === 'activity') nextTick(renderSignalChart)
-      if (tab === 'chat') nextTick(scrollThread)
-    })
-
-    watch(thread, () => nextTick(scrollThread))
-
-    function fmtTime(ts) {
-      if (!ts) return '—'
-      const d = new Date(ts)
-      const diff = (Date.now() - d) / 1000
-      if (diff < 60) return 'now'
-      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-      return d.toLocaleDateString()
-    }
-
-    function avatarStyle(c) {
-      const name = c?.adv_name || c?.short_name || '?'
-      const [from, to] = GRADIENTS[nameHash(name) % GRADIENTS.length]
-      return `linear-gradient(135deg, ${from}, ${to})`
-    }
-
-    onMounted(load)
-    onBeforeUnmount(() => { if (signalChart) signalChart.destroy() })
-
-    return {
-      contact, history, signal, thread, sortedThread, activeTab, text, sending,
-      threadRef, newTag, send, onKeydown, addTag, removeTag, fmtTime, avatarStyle,
-      router, TYPE_META,
-    }
-  },
   template: `
     <div class="h-full flex flex-col">
       <!-- Loading -->
@@ -346,6 +290,22 @@ export default defineComponent({
             >{{ TYPE_META[contact.contact_type_name]?.label || contact.contact_type_name }}</span>
           </div>
 
+          <!-- Action buttons -->
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              v-if="isRepeater"
+              @click="ping"
+              :disabled="pinging"
+              title="Ping (zero hop)"
+              class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40"
+            ><Icon name="signal" :size="17" /></button>
+            <button
+              @click="toggleFavorite"
+              :class="['w-8 h-8 flex items-center justify-center rounded-lg transition-colors', contact.favorite ? 'text-amber-400' : 'text-zinc-600 hover:text-amber-500']"
+              title="Favorite"
+            ><Icon name="star" :size="17" /></button>
+          </div>
+
           <!-- Tab switcher (mobile) -->
           <div class="flex gap-1 md:hidden" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 3px;">
             <button
@@ -357,10 +317,10 @@ export default defineComponent({
           </div>
         </div>
 
-        <!-- Body: two-panel on desktop, tab-based on mobile -->
+        <!-- Body -->
         <div class="flex flex-1 min-h-0">
 
-          <!-- Info panel: visible on desktop always; on mobile only when tab=info -->
+          <!-- Info panel: always on desktop, mobile only when tab=info -->
           <div
             :class="[
               'flex-col border-r border-white/[0.05] overflow-y-auto scrollbar-none',
@@ -381,10 +341,14 @@ export default defineComponent({
             </div>
 
             <!-- Fields -->
-            <div class="px-5 py-4 space-y-3">
+            <div class="px-5 py-4 space-y-3 border-b border-white/[0.04]">
               <div class="flex justify-between text-sm">
                 <span class="text-zinc-500">Last heard</span>
                 <span class="text-zinc-200">{{ fmtTime(contact.last_heard) }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-zinc-500">Last advert</span>
+                <span class="text-zinc-200">{{ fmtTime(contact.last_advert) }}</span>
               </div>
               <div v-if="contact.lat" class="flex justify-between text-sm">
                 <span class="text-zinc-500">Location</span>
@@ -393,8 +357,45 @@ export default defineComponent({
               <div v-if="contact.notes" class="text-xs text-zinc-400 leading-relaxed">{{ contact.notes }}</div>
             </div>
 
+            <!-- Path -->
+            <div class="px-5 py-4 border-b border-white/[0.04]">
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Path</div>
+                <button
+                  @click="doResetPath"
+                  title="Reset path"
+                  class="text-zinc-700 hover:text-rose-400 transition-colors text-xs flex items-center gap-1"
+                ><Icon name="refresh" :size="12" /> Reset</button>
+              </div>
+              <div v-if="!contact.out_path" class="text-xs text-zinc-700 mb-3">No path — direct or undiscovered</div>
+              <div v-else class="space-y-1.5 mb-3">
+                <div v-for="(hop, idx) in pathHops" :key="idx" class="flex items-center gap-2 text-xs">
+                  <span class="text-zinc-700 w-4 flex-shrink-0 text-right font-mono">{{ idx + 1 }}</span>
+                  <span class="font-mono text-[11px]" :class="hop.name ? 'text-cyan-400' : 'text-zinc-500'">{{ hop.hex }}</span>
+                  <span v-if="hop.name" class="text-zinc-400 truncate">{{ hop.name }}</span>
+                  <span v-else class="text-zinc-700 italic">unknown</span>
+                </div>
+                <div v-if="!pathHops.length" class="text-xs text-zinc-700 font-mono break-all">{{ contact.out_path }}</div>
+              </div>
+              <form @submit.prevent="doSetPath" class="flex gap-2">
+                <input
+                  v-model="newPath"
+                  type="text"
+                  placeholder="Set path hex…"
+                  class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none font-mono"
+                  style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
+                />
+                <button
+                  type="submit"
+                  :disabled="!newPath.trim() || settingPath"
+                  class="px-2.5 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40"
+                  style="background: rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.4);"
+                >Set</button>
+              </form>
+            </div>
+
             <!-- Tags -->
-            <div class="px-5 pb-4 border-t border-white/[0.04] pt-4">
+            <div class="px-5 py-4 border-b border-white/[0.04]">
               <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-2">Tags</div>
               <div class="flex flex-wrap gap-1.5 mb-3">
                 <span
@@ -422,9 +423,61 @@ export default defineComponent({
                 >Add</button>
               </form>
             </div>
+
+            <!-- Repeater Admin -->
+            <div v-if="isRepeater" class="px-5 py-4">
+              <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-3">Repeater Admin</div>
+
+              <!-- Not logged in -->
+              <template v-if="!loggedIn">
+                <form @submit.prevent="doLogin" class="space-y-2">
+                  <input
+                    v-model="adminPassword"
+                    type="password"
+                    placeholder="Admin password…"
+                    class="w-full px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none"
+                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
+                  />
+                  <button
+                    type="submit"
+                    :disabled="!adminPassword || adminLoggingIn"
+                    class="w-full px-3 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
+                    style="background: rgba(14,116,144,0.3); border: 1px solid rgba(14,116,144,0.4);"
+                  >
+                    <Icon name="key" :size="12" />
+                    {{ adminLoggingIn ? 'Logging in…' : 'Login' }}
+                  </button>
+                </form>
+              </template>
+
+              <!-- Logged in: admin actions -->
+              <template v-else>
+                <div class="text-xs text-emerald-400 mb-3 flex items-center gap-1.5">
+                  <Icon name="check-circle" :size="13" /> Logged in
+                </div>
+                <div class="space-y-2">
+                  <button
+                    @click="ping"
+                    :disabled="pinging"
+                    class="w-full px-3 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
+                    style="background: rgba(14,116,144,0.3); border: 1px solid rgba(14,116,144,0.4);"
+                  ><Icon name="signal" :size="12" /> {{ pinging ? 'Pinging…' : 'Ping (zero hop)' }}</button>
+                  <button
+                    @click="doRequestTelemetry"
+                    class="w-full px-3 py-1.5 rounded-lg text-xs text-white transition-colors flex items-center justify-center gap-1.5"
+                    style="background: rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.3);"
+                  ><Icon name="chart-bar" :size="12" /> Request Telemetry</button>
+                  <button
+                    @click="loggedIn = false"
+                    class="w-full px-3 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center justify-center gap-1.5"
+                    style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"
+                  ><Icon name="logout" :size="12" /> Logout</button>
+                </div>
+              </template>
+            </div>
           </div>
 
-          <!-- Activity panel: mobile only (history tab) -->
+          <!-- Activity panel: mobile only -->
           <div
             :class="[
               'flex-col flex-1 overflow-y-auto scrollbar-none px-4 py-4 space-y-3',
@@ -434,6 +487,34 @@ export default defineComponent({
             <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-1">Signal History</div>
             <div v-if="!signal.length" class="text-sm text-zinc-600 py-4 text-center">No signal data yet.</div>
             <div v-else id="signal-chart" class="rounded-xl overflow-hidden" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"></div>
+
+            <!-- Telemetry (REP / SENS) -->
+            <template v-if="isRepeater || isSensor">
+              <div class="flex items-center justify-between mt-4 mb-1">
+                <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Telemetry</div>
+                <button
+                  @click="doRequestTelemetry"
+                  class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1"
+                ><Icon name="refresh" :size="12" /> Request</button>
+              </div>
+              <div v-if="!telemetry.length" class="text-sm text-zinc-600 py-2 text-center">No telemetry yet.</div>
+              <div
+                v-for="rec in telemetry"
+                :key="rec.id"
+                class="rounded-xl px-3 py-2.5 space-y-1"
+                style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"
+              >
+                <div class="text-[10px] text-zinc-600">{{ new Date(rec.timestamp).toLocaleString() }}</div>
+                <div class="flex flex-wrap gap-x-4 gap-y-1">
+                  <template v-for="(val, key) in rec.lpp_data" :key="key">
+                    <div class="text-xs">
+                      <span class="text-zinc-600 capitalize">{{ key.replace(/_/g, ' ') }}</span>
+                      <span class="text-zinc-300 ml-1.5">{{ typeof val === 'object' ? JSON.stringify(val) : val }}</span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
 
             <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mt-4 mb-1">Change History</div>
             <div v-if="!history.length" class="text-sm text-zinc-600 py-4 text-center">No changes recorded.</div>
@@ -478,7 +559,7 @@ export default defineComponent({
                   <div class="flex items-center gap-1.5 mt-1" :class="msg.direction === 'out' ? 'justify-end' : 'justify-start'">
                     <span class="text-[10px] opacity-60">{{ new Date(msg.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
                     <template v-if="msg.direction === 'out'">
-                      <Icon v-if="msg.status === 'ack'" name="check-circle" :size="11" class="opacity-70" />
+                      <Icon v-if="msg.status === 'acked'" name="check-circle" :size="11" class="opacity-70" />
                       <Icon v-else-if="msg.status === 'sent'" name="check" :size="11" class="opacity-50" />
                       <Icon v-else name="clock" :size="11" class="opacity-40" />
                     </template>
