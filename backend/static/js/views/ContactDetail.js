@@ -123,8 +123,8 @@ export default defineComponent({
     const activeTab = ref('chat')
     const sending = ref(false)
     const contactGroups = ref([])
-    const newGroupName = ref('')
-    const selectedGroupId = ref('')
+    const groupSearch = ref('')
+    const groupSearchOpen = ref(false)
     const pinging = ref(false)
     const pingResult = ref(null)
     const pings = ref([])
@@ -158,6 +158,10 @@ export default defineComponent({
     const availableGroups = computed(() =>
       groupsStore.groups.filter((g) => !contactGroups.value.find((cg) => cg.id === g.id))
     )
+    const filteredAvailableGroups = computed(() => {
+      const q = groupSearch.value.toLowerCase().trim()
+      return q ? availableGroups.value.filter((g) => g.name.toLowerCase().includes(q)) : availableGroups.value
+    })
 
     const pathHops = computed(() => {
       const raw = contact.value?.out_path
@@ -249,22 +253,41 @@ export default defineComponent({
       try {
         await groupsStore.addMember(Number(groupId), contactId)
         contactGroups.value = await contacts.fetchContactGroups(contactId)
-        selectedGroupId.value = ''
+        groupSearch.value = ''
+        groupSearchOpen.value = false
       } catch (e) {
         toast.error(e.message || 'Failed to add to group')
       }
     }
 
     async function createAndAddToGroup() {
-      if (!newGroupName.value.trim()) return
+      if (!groupSearch.value.trim()) return
       try {
-        const group = await groupsStore.create({ name: newGroupName.value.trim() })
+        const group = await groupsStore.create({ name: groupSearch.value.trim() })
         await groupsStore.addMember(group.id, contactId)
         contactGroups.value = await contacts.fetchContactGroups(contactId)
         await groupsStore.fetchAll()
-        newGroupName.value = ''
+        groupSearch.value = ''
+        groupSearchOpen.value = false
       } catch (e) {
         toast.error(e.message || 'Failed to create group')
+      }
+    }
+
+    function blurGroupSearch() {
+      setTimeout(() => { groupSearchOpen.value = false }, 150)
+    }
+
+    function closeGroupSearch() {
+      groupSearch.value = ''
+      groupSearchOpen.value = false
+    }
+
+    function selectFirstGroupOption() {
+      if (filteredAvailableGroups.value.length) {
+        addToGroup(filteredAvailableGroups.value[0].id)
+      } else if (groupSearch.value.trim()) {
+        createAndAddToGroup()
       }
     }
 
@@ -480,7 +503,7 @@ export default defineComponent({
 
     return {
       contact, history, signal, telemetry, pings, thread,
-      activeTab, sending, contactGroups, newGroupName, selectedGroupId, availableGroups,
+      activeTab, sending, contactGroups, groupSearch, groupSearchOpen, availableGroups, filteredAvailableGroups,
       pinging, pingResult, newPath, settingPath,
       isRepeater, isSensor, hasTelemetry, pathHops,
       currentPage, telemetryModal, telemetryPassword, requestingTelemetry,
@@ -488,6 +511,7 @@ export default defineComponent({
       adminStatus, fetchingAdminStatus, adminAcl, fetchingAdminAcl,
       cliInput, cliSending, cliHistory, settingInputs,
       sendMsg, addToGroup, createAndAddToGroup, removeFromGroup, toggleFavorite,
+      blurGroupSearch, closeGroupSearch, selectFirstGroupOption,
       ping, doResetPath, doSetPath, doLogin, doLogout,
       openTelemetryModal, submitTelemetryRequest,
       doRequestAdminStatus, doRequestAdminAcl, sendCliCmd,
@@ -904,44 +928,58 @@ export default defineComponent({
                   v-for="group in contactGroups"
                   :key="group.id"
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border"
-                  :style="{ background: group.color + '22', borderColor: group.color + '44', color: group.color }"
+                  :style="{ background: (group.color || '#7c3aed') + '22', borderColor: (group.color || '#7c3aed') + '44', color: group.color || '#a78bfa' }"
                 >
                   {{ group.name }}
-                  <button @click="removeFromGroup(group.id)" class="opacity-60 hover:opacity-100 transition-opacity">&times;</button>
+                  <button @click="removeFromGroup(group.id)" class="opacity-50 hover:opacity-100 transition-opacity leading-none">&times;</button>
                 </span>
                 <span v-if="!contactGroups.length" class="text-xs text-zinc-700">No groups</span>
               </div>
-              <div v-if="availableGroups.length" class="flex gap-2 mb-2">
-                <select
-                  v-model="selectedGroupId"
-                  class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 outline-none"
+              <div class="relative">
+                <div
+                  class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
                   style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
                 >
-                  <option value="" disabled>Add to existing group\u2026</option>
-                  <option v-for="g in availableGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
-                </select>
-                <button
-                  @click="addToGroup(selectedGroupId)"
-                  :disabled="!selectedGroupId"
-                  class="px-3 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40"
-                  style="background: rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.4);"
-                >Add</button>
+                  <Icon name="plus" :size="13" class="text-zinc-600 flex-shrink-0" />
+                  <input
+                    v-model="groupSearch"
+                    @focus="groupSearchOpen = true"
+                    @blur="blurGroupSearch"
+                    @keydown.enter.prevent="selectFirstGroupOption"
+                    @keydown.escape="closeGroupSearch"
+                    type="text"
+                    placeholder="Add or create group\u2026"
+                    class="flex-1 bg-transparent text-xs text-zinc-100 placeholder-zinc-600 outline-none"
+                  />
+                </div>
+                <div
+                  v-if="groupSearchOpen && (filteredAvailableGroups.length || groupSearch.trim())"
+                  class="absolute z-20 left-0 right-0 mt-1 rounded-xl overflow-hidden py-1"
+                  style="background: rgba(13,13,22,0.98); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 24px rgba(0,0,0,0.5);"
+                >
+                  <button
+                    v-for="g in filteredAvailableGroups"
+                    :key="g.id"
+                    @mousedown.prevent="addToGroup(g.id)"
+                    class="w-full text-left px-3 py-2 text-xs text-zinc-200 hover:bg-white/[0.06] transition-colors flex items-center gap-2.5"
+                  >
+                    <span class="w-2 h-2 rounded-full flex-shrink-0" :style="{ background: g.color || '#7c3aed' }"></span>
+                    {{ g.name }}
+                  </button>
+                  <button
+                    v-if="groupSearch.trim() && !filteredAvailableGroups.find(g => g.name.toLowerCase() === groupSearch.trim().toLowerCase())"
+                    @mousedown.prevent="createAndAddToGroup"
+                    class="w-full text-left px-3 py-2 text-xs text-violet-300 hover:bg-violet-500/10 transition-colors flex items-center gap-2"
+                  >
+                    <Icon name="plus-circle" :size="13" />
+                    Create \u201c{{ groupSearch.trim() }}\u201d
+                  </button>
+                  <div
+                    v-if="!filteredAvailableGroups.length && !groupSearch.trim()"
+                    class="px-3 py-2 text-xs text-zinc-600 text-center"
+                  >All groups added</div>
+                </div>
               </div>
-              <form @submit.prevent="createAndAddToGroup" class="flex gap-2">
-                <input
-                  v-model="newGroupName"
-                  type="text"
-                  placeholder="New group name\u2026"
-                  class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none"
-                  style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
-                />
-                <button
-                  type="submit"
-                  :disabled="!newGroupName.trim()"
-                  class="px-3 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40"
-                  style="background: rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.4);"
-                >Create</button>
-              </form>
             </div>
 
             <!-- Nav buttons -->
