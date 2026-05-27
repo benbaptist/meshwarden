@@ -48,10 +48,10 @@ export default defineComponent({
 
       <!-- Node cards -->
       <section class="mb-6">
-        <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-0.5">Nodes</h2>
-        <div v-if="nodes.loading" class="text-gray-600 text-sm py-4">Loading…</div>
-        <div v-else-if="!nodes.nodes.length" class="rounded-2xl border border-dashed border-gray-800 p-8 text-center">
-          <p class="text-gray-500 mb-3 text-sm">No nodes configured yet.</p>
+        <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 px-0.5">Nodes</h2>
+        <div v-if="nodes.loading" class="text-zinc-600 text-sm py-4">Loading…</div>
+        <div v-else-if="!nodes.nodes.length" class="rounded-2xl border border-dashed border-white/[0.1] p-8 text-center">
+          <p class="text-zinc-500 mb-3 text-sm">No nodes configured yet.</p>
           <router-link to="/nodes" class="text-mesh-400 hover:text-mesh-300 text-sm flex items-center justify-center gap-1">
             Add a node <Icon name="arrow-right" :size="13" />
           </router-link>
@@ -61,19 +61,19 @@ export default defineComponent({
             v-for="node in nodes.nodes"
             :key="node.id"
             :to="\`/nodes/\${node.id}\`"
-            class="flex items-center gap-3.5 px-4 py-4 rounded-2xl bg-gray-900 border border-gray-800 hover:border-gray-700 active:bg-gray-800 transition-colors"
+            class="flex items-center gap-3.5 px-4 py-4 rounded-2xl glass transition-colors hover:bg-white/[0.06] active:bg-white/[0.08]"
           >
-            <div :class="['w-2.5 h-2.5 rounded-full flex-shrink-0', node.connected ? 'bg-green-500 shadow-[0_0_6px_2px_rgba(34,197,94,0.35)]' : 'bg-gray-600']"></div>
+            <div :class="['w-2.5 h-2.5 rounded-full flex-shrink-0', node.connected ? 'bg-green-500 shadow-[0_0_6px_2px_rgba(34,197,94,0.35)]' : 'bg-zinc-600']"></div>
             <div class="flex-1 min-w-0">
               <div class="font-medium text-white truncate">{{ node.name }}</div>
-              <div class="text-xs text-gray-500 mt-0.5 truncate">
+              <div class="text-xs text-zinc-500 mt-0.5 truncate">
                 {{ node.connection_type === 'tcp' ? node.host + ':' + node.port : node.device_path }}
               </div>
             </div>
-            <span :class="['text-xs font-medium flex-shrink-0', node.connected ? 'text-green-500' : 'text-gray-600']">
+            <span :class="['text-xs font-medium flex-shrink-0', node.connected ? 'text-green-500' : 'text-zinc-600']">
               {{ node.connected ? 'Online' : 'Offline' }}
             </span>
-            <Icon name="arrow-right" :size="14" class="text-gray-700 flex-shrink-0" />
+            <Icon name="arrow-right" :size="14" class="text-zinc-700 flex-shrink-0" />
           </router-link>
         </div>
       </section>
@@ -81,22 +81,22 @@ export default defineComponent({
       <!-- Recent messages -->
       <section class="mb-6">
         <div class="flex items-center justify-between mb-3 px-0.5">
-          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Recent Messages</h2>
+          <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Recent Messages</h2>
           <router-link to="/chat" class="flex items-center gap-0.5 text-xs text-mesh-400 hover:text-mesh-300">
             All <Icon name="arrow-right" :size="12" />
           </router-link>
         </div>
-        <div class="rounded-2xl bg-gray-900 border border-gray-800 overflow-hidden divide-y divide-gray-800">
-          <div v-if="!recentMessages.length" class="p-6 text-center text-gray-600 text-sm">No messages yet</div>
+        <div class="rounded-2xl overflow-hidden divide-y divide-white/[0.04]" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+          <div v-if="!recentMessages.length" class="p-6 text-center text-zinc-600 text-sm">No messages yet</div>
           <div v-for="msg in recentMessages" :key="msg.id" class="flex items-start gap-3 px-4 py-3">
-            <span :class="['flex-shrink-0 mt-0.5', msg.direction === 'in' ? 'text-mesh-500' : 'text-gray-600']">
+            <span :class="['flex-shrink-0 mt-0.5', msg.direction === 'in' ? 'text-mesh-500' : 'text-zinc-600']">
               <Icon name="chat" :size="15" />
             </span>
             <div class="min-w-0 flex-1">
-              <div class="text-sm text-gray-200 truncate">{{ msg.text }}</div>
-              <div class="text-xs text-gray-600 mt-0.5">{{ relativeTime(msg.timestamp) }}</div>
+              <div class="text-sm text-zinc-200 truncate">{{ msg.text }}</div>
+              <div class="text-xs text-zinc-600 mt-0.5">{{ relativeTime(msg.timestamp) }}</div>
             </div>
-            <span :class="['text-xs px-1.5 py-0.5 rounded flex-shrink-0 font-mono', msg.direction === 'in' ? 'bg-blue-900/60 text-blue-400' : 'bg-gray-800 text-gray-500']">
+            <span :class="['text-xs px-1.5 py-0.5 rounded flex-shrink-0 font-mono', msg.direction === 'in' ? 'bg-violet-500/15 text-violet-400' : 'bg-white/[0.05] text-zinc-500']">
               {{ msg.direction === 'in' ? 'RX' : 'TX' }}
             </span>
           </div>
@@ -106,27 +106,27 @@ export default defineComponent({
       <!-- Recently heard contacts -->
       <section>
         <div class="flex items-center justify-between mb-3 px-0.5">
-          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Recently Heard</h2>
+          <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Recently Heard</h2>
           <router-link to="/contacts" class="flex items-center gap-0.5 text-xs text-mesh-400 hover:text-mesh-300">
             All <Icon name="arrow-right" :size="12" />
           </router-link>
         </div>
-        <div class="rounded-2xl bg-gray-900 border border-gray-800 overflow-hidden divide-y divide-gray-800">
-          <div v-if="!recentContacts.length" class="p-6 text-center text-gray-600 text-sm">No contacts yet</div>
+        <div class="rounded-2xl overflow-hidden divide-y divide-white/[0.04]" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+          <div v-if="!recentContacts.length" class="p-6 text-center text-zinc-600 text-sm">No contacts yet</div>
           <router-link
             v-for="c in recentContacts"
             :key="c.id"
             :to="\`/contacts/\${c.id}\`"
-            class="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-800/50 active:bg-gray-800 transition-colors"
+            class="flex items-center gap-3 px-4 py-3.5 hover:bg-white/[0.04] active:bg-white/[0.06] transition-colors"
           >
-            <div class="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-300 flex-shrink-0">
+            <div class="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center text-xs font-bold text-zinc-300 flex-shrink-0">
               {{ (c.adv_name || '?')[0].toUpperCase() }}
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-sm font-medium text-white truncate">{{ c.adv_name || c.public_key.slice(0,12) }}</div>
-              <div class="text-xs text-gray-500">{{ c.contact_type_name }} · {{ relativeTime(c.last_advert) }}</div>
+              <div class="text-xs text-zinc-500">{{ c.contact_type_name }} · {{ relativeTime(c.last_advert) }}</div>
             </div>
-            <Icon name="arrow-right" :size="14" class="text-gray-700 flex-shrink-0" />
+            <Icon name="arrow-right" :size="14" class="text-zinc-700 flex-shrink-0" />
           </router-link>
         </div>
       </section>

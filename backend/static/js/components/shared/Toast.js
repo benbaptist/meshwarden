@@ -23,30 +23,30 @@ export function useToast() {
 export default defineComponent({
   name: 'AppToast',
   setup() {
-    const icons = {
-      success: '✓',
-      error: '✕',
-      info: 'ℹ',
-      warn: '⚠',
+    const typeConfig = {
+      success: { icon: 'check-circle',       accent: '#34d399' },
+      error:   { icon: 'x-circle',           accent: '#fb7185' },
+      info:    { icon: 'information-circle', accent: '#a78bfa' },
+      warn:    { icon: 'warning',             accent: '#f59e0b' },
     }
-    const colors = {
-      success: 'bg-green-800 border-green-600 text-green-100',
-      error: 'bg-red-900 border-red-600 text-red-100',
-      info: 'bg-gray-800 border-gray-600 text-gray-100',
-      warn: 'bg-yellow-900 border-yellow-600 text-yellow-100',
-    }
-    return { toasts, icons, colors }
+    return { toasts, typeConfig }
   },
   template: `
-    <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+    <div class="fixed bottom-20 md:bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
       <transition-group name="toast">
         <div
           v-for="t in toasts"
           :key="t.id"
-          :class="['flex items-center gap-3 px-4 py-3 rounded-lg border text-sm shadow-xl pointer-events-auto min-w-[240px] max-w-sm', colors[t.type]]"
+          class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm shadow-2xl pointer-events-auto min-w-[240px] max-w-sm"
+          :style="{
+            background: 'rgba(15,15,24,0.95)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderLeft: '3px solid ' + typeConfig[t.type].accent,
+          }"
         >
-          <span class="font-bold text-base flex-shrink-0">{{ icons[t.type] }}</span>
-          <span>{{ t.message }}</span>
+          <Icon :name="typeConfig[t.type].icon" :size="18" :style="{ color: typeConfig[t.type].accent }" class="flex-shrink-0" />
+          <span class="text-zinc-100">{{ t.message }}</span>
         </div>
       </transition-group>
     </div>

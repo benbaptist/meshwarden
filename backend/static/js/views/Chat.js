@@ -143,17 +143,17 @@ export default defineComponent({
       <!-- ── Conversation list ──────────────────────────────────────────── -->
       <!-- Mobile: full-screen when no active conv. Desktop: fixed sidebar. -->
       <div :class="[
-        'flex flex-col bg-gray-950 border-r border-gray-800',
+        'flex flex-col border-r border-white/[0.06]',
         activeKey
           ? 'hidden md:flex md:w-64 md:flex-shrink-0'
           : 'flex-1 md:w-64 md:flex-shrink-0'
-      ]">
+      ]" style="background: #09090f;">
         <div class="px-4 pt-6 pb-3 flex-shrink-0">
           <h1 class="text-2xl font-bold text-white">Messages</h1>
         </div>
 
         <div class="flex-1 overflow-y-auto">
-          <div v-if="!conversations.length" class="px-4 py-12 text-center text-gray-600 text-sm">
+          <div v-if="!conversations.length" class="px-4 py-12 text-center text-zinc-600 text-sm">
             No conversations yet
           </div>
           <button
@@ -161,23 +161,23 @@ export default defineComponent({
             :key="conv.key"
             @click="selectConv(conv)"
             :class="[
-              'w-full text-left px-4 py-4 flex items-center gap-3 border-b border-gray-800/60 transition-colors active:bg-gray-800',
-              activeKey === conv.key ? 'bg-gray-900' : 'hover:bg-gray-900/50'
+              'w-full text-left px-4 py-4 flex items-center gap-3 border-b border-white/[0.04] transition-colors active:bg-white/[0.05]',
+              activeKey === conv.key ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]'
             ]"
           >
             <div class="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center text-base font-bold"
-                 :class="conv.type === 'channel' ? 'bg-purple-900 text-purple-300' : 'bg-gray-800 text-gray-300'">
+                 :class="conv.type === 'channel' ? 'bg-amber-500/15 text-amber-400' : 'bg-white/[0.08] text-zinc-300'">
               {{ conv.type === 'channel' ? '#' : conv.label[0].toUpperCase() }}
             </div>
             <div class="min-w-0 flex-1">
               <div class="font-medium text-white truncate">{{ conv.label }}</div>
-              <div class="text-xs text-gray-500 mt-0.5">{{ conv.type === 'channel' ? 'Channel' : 'Direct' }}</div>
+              <div class="text-xs text-zinc-500 mt-0.5">{{ conv.type === 'channel' ? 'Channel' : 'Direct' }}</div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
               <span v-if="conv.unread" class="min-w-[20px] h-5 px-1 rounded-full bg-mesh-600 text-white text-xs font-bold flex items-center justify-center">
                 {{ conv.unread > 9 ? '9+' : conv.unread }}
               </span>
-              <Icon name="arrow-right" :size="14" class="text-gray-700" />
+              <Icon name="arrow-right" :size="14" class="text-zinc-700" />
             </div>
           </button>
         </div>
@@ -196,7 +196,7 @@ export default defineComponent({
 
         <template v-else>
           <!-- Header -->
-          <div class="px-4 py-3.5 border-b border-gray-800 bg-gray-950 flex items-center gap-3 flex-shrink-0">
+          <div class="px-4 py-3.5 border-b border-white/[0.06] flex items-center gap-3 flex-shrink-0" style="background: #09090f;">
             <!-- Back button — mobile only -->
             <button
               class="md:hidden -ml-1 p-1.5 rounded-lg text-gray-400 hover:text-white transition-colors"
@@ -206,12 +206,12 @@ export default defineComponent({
               <Icon name="arrow-left" :size="22" />
             </button>
             <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                 :class="activeConv.type === 'channel' ? 'bg-purple-900 text-purple-300' : 'bg-gray-800 text-gray-300'">
+                 :class="activeConv.type === 'channel' ? 'bg-amber-500/15 text-amber-400' : 'bg-white/[0.08] text-zinc-300'">
               {{ activeConv.type === 'channel' ? '#' : activeConv.label[0].toUpperCase() }}
             </div>
             <div class="min-w-0 flex-1">
               <div class="font-semibold text-white truncate">{{ activeConv.label }}</div>
-              <div class="text-xs text-gray-500">{{ activeConv.type === 'channel' ? 'Channel' : 'Direct message' }}</div>
+              <div class="text-xs text-zinc-500">{{ activeConv.type === 'channel' ? 'Channel' : 'Direct message' }}</div>
             </div>
           </div>
 
@@ -227,19 +227,19 @@ export default defineComponent({
                   'px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
                   msg.direction === 'out'
                     ? 'bg-mesh-700 text-white rounded-br-sm'
-                    : 'bg-gray-800 text-gray-100 rounded-bl-sm'
+                    : 'bg-white/[0.08] text-zinc-100 rounded-bl-sm'
                 ]">
                   <div v-if="msg.direction === 'in' && msg.msg_type === 'channel' && parseChanMsg(msg.text).sender"
                        class="text-[11px] font-medium text-purple-400 mb-0.5">{{ parseChanMsg(msg.text).sender }}</div>
                   <div>{{ msg.direction === 'in' && msg.msg_type === 'channel' ? parseChanMsg(msg.text).body : msg.text }}</div>
                 </div>
                 <div class="flex items-center gap-2 px-1">
-                  <span class="text-xs text-gray-600">{{ relativeTime(msg.timestamp) }}</span>
+                  <span class="text-xs text-zinc-600">{{ relativeTime(msg.timestamp) }}</span>
                   <SignalBadge v-if="msg.snr != null" :snr="msg.snr" :rssi="msg.rssi" />
                   <span
                     v-if="msg.direction === 'out'"
                     :title="msg.status === 'acked' ? 'Received by destination' : msg.status === 'sent' ? 'Seen by mesh' : msg.status === 'failed' ? 'Failed to send' : 'Sending…'"
-                    class="flex items-center text-gray-600"
+                    class="flex items-center text-zinc-600"
                   >
                     <Icon v-if="msg.status === 'failed'" name="x-circle" :size="12" class="text-red-500" />
                     <Icon v-else-if="msg.status === 'acked'" name="check-circle" :size="12" />
@@ -252,7 +252,7 @@ export default defineComponent({
           </div>
 
           <!-- Input -->
-          <div class="px-4 py-3 border-t border-gray-800 bg-gray-950 flex-shrink-0">
+          <div class="px-4 py-3 border-t border-white/[0.06] flex-shrink-0" style="background: #09090f;">
             <form @submit.prevent="sendMessage" class="flex gap-2">
               <input
                 v-model="text"
@@ -260,7 +260,8 @@ export default defineComponent({
                 placeholder="Message…"
                 autocomplete="off"
                 :disabled="sending"
-                class="flex-1 px-4 py-3 rounded-2xl bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-mesh-500 text-sm transition-colors"
+                class="flex-1 px-4 py-3 rounded-2xl text-sm text-white placeholder-zinc-600 outline-none transition-all"
+                style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);"
               />
               <button
                 type="submit"

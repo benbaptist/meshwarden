@@ -9,10 +9,10 @@ export default defineComponent({
   setup(props) {
     const quality = computed(() => {
       if (props.snr == null) return null
-      if (props.snr >= 8)  return { label: 'Excellent', cls: 'bg-green-900 text-green-400' }
-      if (props.snr >= 3)  return { label: 'Good',      cls: 'bg-blue-900 text-blue-400' }
-      if (props.snr >= -3) return { label: 'Fair',      cls: 'bg-yellow-900 text-yellow-400' }
-      return                      { label: 'Weak',      cls: 'bg-red-900 text-red-400' }
+      if (props.snr >= 8)  return { label: 'Excellent', cls: 'bg-emerald-500/15 text-emerald-400' }
+      if (props.snr >= 3)  return { label: 'Good',      cls: 'bg-emerald-500/10 text-emerald-500' }
+      if (props.snr >= -3) return { label: 'Fair',      cls: 'bg-amber-500/15 text-amber-400' }
+      return                      { label: 'Weak',      cls: 'bg-rose-500/15 text-rose-400' }
     })
     return { quality }
   },
