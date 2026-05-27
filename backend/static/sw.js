@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meshwarden-v1';
+const CACHE_NAME = 'meshwarden-__CACHE_VERSION__';
 const STATIC_ASSETS = [
   '/',
   '/static/js/app.js',

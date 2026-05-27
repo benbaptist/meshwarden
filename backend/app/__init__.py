@@ -1,5 +1,6 @@
 import os
-from flask import Flask, send_from_directory, abort
+import hashlib
+from flask import Flask, send_from_directory, abort, Response
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -71,9 +72,23 @@ def create_app(config_name: str | None = None) -> Flask:
     def manifest():
         return send_from_directory(app.static_folder, 'manifest.json')
 
+    # Compute a version string from static file mtimes so it changes on every deploy.
+    def _static_version(static_dir: str) -> str:
+        h = hashlib.md5()
+        for root, _, files in os.walk(static_dir):
+            for fname in sorted(files):
+                fpath = os.path.join(root, fname)
+                h.update(str(os.path.getmtime(fpath)).encode())
+        return h.hexdigest()[:12]
+
+    _cache_version = _static_version(app.static_folder)
+
     @app.route('/sw.js')
     def service_worker():
-        resp = send_from_directory(app.static_folder, 'sw.js')
+        with open(os.path.join(app.static_folder, 'sw.js')) as f:
+            src = f.read()
+        src = src.replace('__CACHE_VERSION__', _cache_version)
+        resp = Response(src, mimetype='application/javascript')
         resp.headers['Cache-Control'] = 'no-cache'
         resp.headers['Service-Worker-Allowed'] = '/'
         return resp
