@@ -197,7 +197,6 @@ def contact_pings(contact_id: int):
 @contacts_bp.post('/<int:contact_id>/ping')
 @require_auth
 def ping_contact(contact_id: int):
-    import threading
     import time
 
     contact = db.session.get(Contact, contact_id)
@@ -208,24 +207,18 @@ def ping_contact(contact_id: int):
     if not conn or not conn.is_connected:
         return jsonify({'error': 'Node not connected'}), 503
 
-    event = threading.Event()
-    result: dict = {}
     sent_at = time.monotonic()
-    waiter = {'event': event, 'result': result, 'sent_at': sent_at}
-    node_manager.set_pending_ping(contact.node_id, contact_id, waiter)
-
+    success = False
+    latency_ms = None
     try:
         node_manager.run_async(
-            conn.mc.commands.req_status(_build_contact_dict(contact), timeout=0), timeout=5
+            conn.mc.commands.req_status_sync(_build_contact_dict(contact), timeout=0), timeout=5
         )
-    except Exception as e:
-        node_manager.clear_pending_ping(contact.node_id, contact_id)
-        return jsonify({'error': str(e)}), 500
+        latency_ms = round((time.monotonic() - sent_at) * 1000)
+        success = True
+    except Exception:
+        pass
 
-    success = event.wait(timeout=2.0)
-    node_manager.clear_pending_ping(contact.node_id, contact_id)
-
-    latency_ms = result.get('latency_ms') if success else None
     record = PingRecord(
         node_id=contact.node_id,
         contact_id=contact_id,
@@ -346,10 +339,10 @@ def admin_request_status(contact_id: int):
         return jsonify({'error': 'Node not connected'}), 503
 
     try:
-        node_manager.run_async(
-            conn.mc.commands.req_status(_build_contact_dict(contact), timeout=0), timeout=10
+        result = node_manager.run_async(
+            conn.mc.commands.req_status_sync(_build_contact_dict(contact), timeout=0), timeout=30
         )
-        return jsonify({'ok': True})
+        return jsonify({'ok': True, 'status': result.payload})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -417,10 +417,12 @@ export default defineComponent({
       fetchingAdminStatus.value = true
       adminStatus.value = null
       try {
-        await contacts.requestAdminStatus(contactId)
+        const data = await contacts.requestAdminStatus(contactId)
+        adminStatus.value = data.status
       } catch (e) {
-        fetchingAdminStatus.value = false
         toast.error(e.message || 'Failed to request status')
+      } finally {
+        fetchingAdminStatus.value = false
       }
     }
 
