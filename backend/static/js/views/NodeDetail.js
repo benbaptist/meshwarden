@@ -150,7 +150,7 @@ export default defineComponent({
 
         <!-- Radio config modal -->
         <Modal :show="showRadioEdit" title="Edit Radio Config" @close="showRadioEdit = false">
-          <form @submit.prevent="saveRadioConfig" class="space-y-4">
+          <form @submit.prevent="saveRadioConfig" class="space-y-4" autocomplete="off">
             <div>
               <label class="block text-xs text-zinc-500 mb-1.5">Node Name</label>
               <input v-model="radioForm.name" type="text"

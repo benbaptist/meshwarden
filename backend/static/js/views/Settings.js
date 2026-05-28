@@ -187,12 +187,12 @@ export default defineComponent({
         <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-3">Account</div>
         <div class="glass rounded-2xl p-5">
           <div class="text-sm font-medium text-zinc-300 mb-4">Change Password</div>
-          <form @submit.prevent="changePassword" class="space-y-3">
-            <input v-model="currentPassword" type="password" placeholder="Current password" required autocomplete="current-password"
+          <form @submit.prevent="changePassword" class="space-y-3" autocomplete="off">
+            <input v-model="currentPassword" type="password" placeholder="Current password" required autocomplete="off"
               :class="INPUT" :style="INPUT_STYLE" />
-            <input v-model="newPassword" type="password" placeholder="New password (min 12 chars)" required autocomplete="new-password"
+            <input v-model="newPassword" type="password" placeholder="New password (min 12 chars)" required autocomplete="off"
               :class="INPUT" :style="INPUT_STYLE" />
-            <input v-model="confirmPassword" type="password" placeholder="Confirm new password" required autocomplete="new-password"
+            <input v-model="confirmPassword" type="password" placeholder="Confirm new password" required autocomplete="off"
               :class="INPUT" :style="INPUT_STYLE" />
             <button
               type="submit"
@@ -209,7 +209,7 @@ export default defineComponent({
     <Modal v-if="showModal" :show="true" @close="closeModal">
       <div class="p-6 w-full max-w-md">
         <h2 class="text-base font-bold text-white mb-5">{{ editingNode ? 'Edit Node' : 'Add Node' }}</h2>
-        <form @submit.prevent="saveNode" class="space-y-3">
+        <form @submit.prevent="saveNode" class="space-y-3" autocomplete="off">
           <div>
             <label class="block text-xs text-zinc-500 mb-1.5">Name</label>
             <input v-model="nodeForm.name" type="text" required placeholder="My Node"

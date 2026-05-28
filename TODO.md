@@ -1,7 +1,5 @@
 - Track and display detailed analytics on the actual Mesh and its quality, packets, etc. tucked away somewhere clean and neat
 
-- Add search to Channels page too; mirror Contacts page UI
-
 - Path UI should show direct hex AS WELL AS showing what contacts those hex hashes may represent (can't be 100% certain since collisions are aboslutely possible), as well as facilities for easily selecting a new path via the GUI
 
 - Settings page is an outlier

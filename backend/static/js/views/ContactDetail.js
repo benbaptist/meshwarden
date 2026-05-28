@@ -697,11 +697,12 @@ export default defineComponent({
             <div class="rounded-2xl p-5" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);">
               <div class="text-sm font-semibold text-zinc-100 mb-1">Admin Login</div>
               <div class="text-xs text-zinc-500 mb-4">Authenticate with the repeater to access admin functions.</div>
-              <form @submit.prevent="doLogin" class="space-y-3">
+              <form @submit.prevent="doLogin" class="space-y-3" autocomplete="off">
                 <input
                   v-model="adminPassword"
                   type="password"
                   placeholder="Admin password\u2026"
+                  autocomplete="off"
                   class="w-full px-3.5 py-2.5 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none"
                   style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);"
                   autofocus
@@ -1101,12 +1102,12 @@ export default defineComponent({
                   <div class="text-sm font-semibold text-zinc-100 mb-1">Admin Login</div>
                   <div class="text-xs text-zinc-500 leading-relaxed">Authenticate to manage this repeater remotely.</div>
                 </div>
-                <form @submit.prevent="doLogin" class="space-y-3">
+                <form @submit.prevent="doLogin" class="space-y-3" autocomplete="off">
                   <input
                     v-model="adminPassword"
                     type="password"
                     placeholder="Admin password\u2026"
-                    autocomplete="new-password"
+                    autocomplete="off"
                     class="w-full px-3.5 py-2.5 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none"
                     style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);"
                   />
