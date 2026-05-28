@@ -242,10 +242,14 @@ class EventHandler:
                 )
             ).scalar_one_or_none()
 
+        now = datetime.now(timezone.utc)
+        if contact:
+            contact.last_heard = now
+
         record = TelemetryRecord(
             node_id=self.node_id,
             contact_id=contact.id if contact else None,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=now,
         )
         record.set_lpp(p.get('lpp', {}))
         db.session.add(record)
@@ -272,6 +276,8 @@ class EventHandler:
             ).scalar_one_or_none()
             if contact:
                 contact_id = contact.id
+                contact.last_heard = datetime.now(timezone.utc)
+                db.session.commit()
         if contact_id:
             waiter = node_manager.get_pending_ping(self.node_id, contact_id)
             if waiter:
@@ -298,6 +304,8 @@ class EventHandler:
             ).scalar_one_or_none()
             if contact:
                 contact_id = contact.id
+                contact.last_heard = datetime.now(timezone.utc)
+                db.session.commit()
         socketio.emit('admin:acl', {
             'node_id': self.node_id,
             'contact_id': contact_id,
@@ -316,6 +324,9 @@ class EventHandler:
                     Contact.public_key.like(pubkey_prefix + '%'),
                 )
             ).scalar_one_or_none()
+        if contact:
+            contact.last_heard = datetime.now(timezone.utc)
+            db.session.commit()
         socketio.emit('admin:login_success', {
             'node_id': self.node_id,
             'contact_id': contact.id if contact else None,
@@ -333,6 +344,9 @@ class EventHandler:
                     Contact.public_key.like(pubkey_prefix + '%'),
                 )
             ).scalar_one_or_none()
+        if contact:
+            contact.last_heard = datetime.now(timezone.utc)
+            db.session.commit()
         socketio.emit('admin:login_failed', {
             'node_id': self.node_id,
             'contact_id': contact.id if contact else None,
@@ -352,6 +366,7 @@ class EventHandler:
         out_path = p.get('out_path') or p.get('path')
         if out_path is not None:
             contact.out_path = out_path
+            contact.last_heard = datetime.now(timezone.utc)
             db.session.commit()
             socketio.emit('contact:updated', {
                 'node_id': self.node_id,
