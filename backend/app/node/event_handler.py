@@ -217,9 +217,7 @@ class EventHandler:
             db.select(Contact).filter_by(node_id=self.node_id, public_key=public_key)
         ).scalar_one_or_none()
         if contact:
-            now = datetime.now(timezone.utc)
-            contact.last_advert = now
-            contact.last_heard = now
+            contact.last_advert = datetime.now(timezone.utc)
             db.session.commit()
             socketio.emit('contact:updated', {
                 'node_id': self.node_id,
