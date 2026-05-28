@@ -342,7 +342,7 @@ def admin_request_status(contact_id: int):
         result = node_manager.run_async(
             conn.mc.commands.req_status_sync(_build_contact_dict(contact), timeout=0), timeout=30
         )
-        return jsonify({'ok': True, 'status': result.payload})
+        return jsonify({'ok': True, 'status': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
