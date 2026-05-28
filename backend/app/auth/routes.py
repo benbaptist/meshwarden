@@ -98,10 +98,7 @@ def login():
         db.select(AdminUser).filter_by(username=username)
     ).scalar_one_or_none()
 
-    # Always run verify to prevent timing attacks
-    dummy_hash = '$2b$12$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
-    stored_hash = user.password_hash if user else dummy_hash
-    if not verify_password(password, stored_hash) or not user:
+    if not user or not verify_password(password, user.password_hash):
         return jsonify({'error': 'Invalid credentials'}), 401
 
     access_token = generate_access_token(user.id)
