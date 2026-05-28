@@ -309,6 +309,8 @@ def login_contact(contact_id: int):
         result = node_manager.run_async(
             conn.mc.commands.send_login_sync(contact.public_key, password), timeout=30
         )
+        if result is None:
+            return jsonify({'error': 'No response from repeater'}), 504
         if result.type == EventType.LOGIN_SUCCESS:
             return jsonify({'ok': True})
         return jsonify({'error': 'Authentication rejected by repeater'}), 401
