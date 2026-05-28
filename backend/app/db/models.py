@@ -17,6 +17,21 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _iso(dt: datetime | None) -> str | None:
+    """Serialize a datetime to ISO 8601 with UTC offset.
+
+    SQLite doesn't store timezone info, so datetimes read back from the DB are
+    naive even though they were stored as UTC. Ensure the offset is always
+    present so JavaScript's ``new Date()`` correctly interprets the value as
+    UTC rather than local time.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
@@ -99,7 +114,7 @@ class Node(db.Model):
             'device_path': self.device_path,
             'baud_rate': self.baud_rate,
             'enabled': self.enabled,
-            'last_seen': self.last_seen.isoformat() if self.last_seen else None,
+            'last_seen': _iso(self.last_seen),
         }
         if include_self_info:
             d['self_info'] = self.get_self_info()
@@ -154,8 +169,8 @@ class Contact(db.Model):
             'adv_name': self.adv_name,
             'contact_type': self.contact_type,
             'contact_type_name': self.CONTACT_TYPES.get(self.contact_type, 'NONE'),
-            'last_advert': self.last_advert.isoformat() if self.last_advert else None,
-            'last_heard': self.last_heard.isoformat() if self.last_heard else None,
+            'last_advert': _iso(self.last_advert),
+            'last_heard': _iso(self.last_heard),
             'favorite': self.favorite,
             'lat': self.lat,
             'lon': self.lon,
@@ -180,7 +195,7 @@ class ContactHistory(db.Model):
         return {
             'id': self.id,
             'contact_id': self.contact_id,
-            'timestamp': self.timestamp.isoformat(),
+            'timestamp': _iso(self.timestamp),
             'field_name': self.field_name,
             'old_value': self.old_value,
             'new_value': self.new_value,
@@ -223,7 +238,7 @@ class Message(db.Model):
             'channel_idx': self.channel_idx,
             'text': self.text,
             'txt_type': self.txt_type,
-            'timestamp': self.timestamp.isoformat(),
+            'timestamp': _iso(self.timestamp),
             'sender_timestamp': self.sender_timestamp,
             'snr': self.snr,
             'rssi': self.rssi,
@@ -264,7 +279,7 @@ class TelemetryRecord(db.Model):
             'id': self.id,
             'node_id': self.node_id,
             'contact_id': self.contact_id,
-            'timestamp': self.timestamp.isoformat(),
+            'timestamp': _iso(self.timestamp),
             'lpp_data': self.get_lpp(),
         }
 
@@ -290,7 +305,7 @@ class PingRecord(db.Model):
         return {
             'id': self.id,
             'contact_id': self.contact_id,
-            'sent_at': self.sent_at.isoformat(),
+            'sent_at': _iso(self.sent_at),
             'success': self.success,
             'latency_ms': self.latency_ms,
         }
@@ -364,6 +379,6 @@ class AutomationRule(db.Model):
             'rule_type': self.rule_type,
             'interval_seconds': self.interval_seconds,
             'enabled': self.enabled,
-            'last_run': self.last_run.isoformat() if self.last_run else None,
+            'last_run': _iso(self.last_run),
             'config': self.get_config(),
         }
