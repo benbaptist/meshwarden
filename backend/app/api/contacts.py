@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 
+from meshcore import EventType
 from ..auth.utils import require_auth
 from ..db.models import Contact, ContactHistory, Group, GroupMembership, Message, PingRecord, TelemetryRecord
 from ..extensions import db
@@ -305,10 +306,12 @@ def login_contact(contact_id: int):
         return jsonify({'error': 'Node not connected'}), 503
 
     try:
-        node_manager.run_async(
-            conn.mc.commands.send_login(contact.public_key, password), timeout=10
+        result = node_manager.run_async(
+            conn.mc.commands.send_login_sync(contact.public_key, password), timeout=30
         )
-        return jsonify({'ok': True})
+        if result.type == EventType.LOGIN_SUCCESS:
+            return jsonify({'ok': True})
+        return jsonify({'error': 'Authentication rejected by repeater'}), 401
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

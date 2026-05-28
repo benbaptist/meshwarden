@@ -154,7 +154,6 @@ export default defineComponent({
     const cliSending = ref(false)
     const cliHistory = ref([])
     const settingInputs = ref({})
-    let loginTimeout = null
 
     const thread = computed(() => messages.threads[threadKey] || [])
     const isRepeater = computed(() => contact.value?.contact_type_name === 'REP')
@@ -359,35 +358,27 @@ export default defineComponent({
       adminLoggingIn.value = true
       const pwd = adminPassword.value
       adminPassword.value = ''
-      if (loginTimeout) { clearTimeout(loginTimeout); loginTimeout = null }
       try {
         await contacts.loginContact(contactId, pwd)
-        loginTimeout = setTimeout(() => {
-          if (adminLoggingIn.value) {
-            adminLoggingIn.value = false
-            toast.error('No login response from repeater')
-          }
-        }, 15000)
+        loggedIn.value = true
+        toast.info('Admin access granted')
       } catch (e) {
+        loggedIn.value = false
+        toast.error(e.message || 'Login rejected')
+      } finally {
         adminLoggingIn.value = false
-        toast.error(e.message || 'Login failed')
       }
     }
 
     function handleLoginSuccess(data) {
       if (data.contact_id !== contactId) return
-      if (loginTimeout) { clearTimeout(loginTimeout); loginTimeout = null }
       loggedIn.value = true
-      adminLoggingIn.value = false
-      toast.info('Admin access granted')
     }
 
     function handleLoginFailed(data) {
       if (data.contact_id !== contactId) return
-      if (loginTimeout) { clearTimeout(loginTimeout); loginTimeout = null }
       loggedIn.value = false
       adminLoggingIn.value = false
-      toast.error('Login rejected \u2014 incorrect password')
     }
 
     async function doLogout() {
@@ -520,7 +511,6 @@ export default defineComponent({
     onBeforeUnmount(() => {
       if (signalChart) signalChart.destroy()
       if (telemetryTimeout) clearTimeout(telemetryTimeout)
-      if (loginTimeout) clearTimeout(loginTimeout)
       const socket = getSocket()
       if (socket) {
         socket.off('telemetry:received', handleTelemetryReceived)
@@ -1110,6 +1100,7 @@ export default defineComponent({
                     v-model="adminPassword"
                     type="password"
                     placeholder="Admin password\u2026"
+                    autocomplete="new-password"
                     class="w-full px-3.5 py-2.5 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none"
                     style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);"
                   />
