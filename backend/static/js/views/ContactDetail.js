@@ -58,7 +58,11 @@ const TELEMETRY_FIELD_META = {
 function renderTelemetryEntry(rec) {
   if (!rec?.lpp_data) return []
   const data = typeof rec.lpp_data === 'string' ? JSON.parse(rec.lpp_data) : rec.lpp_data
-  return Object.entries(data).map(([key, val]) => {
+  return Object.entries(data).map(([idx, entry]) => {
+    // LPP format: each entry is {channel, type, value}
+    const isLpp = entry !== null && typeof entry === 'object' && 'type' in entry && 'value' in entry
+    const key = isLpp ? String(entry.type) : idx
+    const val = isLpp ? entry.value : entry
     const meta = TELEMETRY_FIELD_META[key.toLowerCase()]
     let displayVal
     if (meta) {
@@ -69,7 +73,7 @@ function renderTelemetryEntry(rec) {
       displayVal = String(val)
     }
     return {
-      key,
+      key: `${idx}-${key}`,
       label: meta?.label ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       value: displayVal,
       unit: meta?.unit ?? '',
@@ -641,8 +645,8 @@ export default defineComponent({
                       <div class="text-[10px] text-zinc-500 mb-0.5 flex items-center gap-1">
                         {{ field.label }}<span v-if="field.unknown" class="text-[9px] text-zinc-700">(unknown)</span>
                       </div>
-                      <div class="font-mono font-semibold text-sm leading-none" :class="field.color">
-                        {{ field.value }}<span v-if="field.unit" class="text-[11px] font-normal text-zinc-500 ml-0.5">{{ field.unit }}</span>
+                      <div class="font-mono font-semibold text-sm leading-none truncate" :class="field.unknown ? 'text-zinc-500 text-[10px] break-all whitespace-normal' : field.color">
+                        {{ field.value }}<span v-if="field.unit && !field.unknown" class="text-[11px] font-normal text-zinc-500 ml-0.5">{{ field.unit }}</span>
                       </div>
                     </div>
                   </div>
@@ -928,8 +932,8 @@ export default defineComponent({
                   <div class="text-[10px] text-zinc-500 mb-0.5 flex items-center gap-1">
                     {{ field.label }}<span v-if="field.unknown" class="text-[9px] text-zinc-700">(unknown)</span>
                   </div>
-                  <div class="font-mono font-semibold text-sm leading-none" :class="field.color">
-                    {{ field.value }}<span v-if="field.unit" class="text-[11px] font-normal text-zinc-500 ml-0.5">{{ field.unit }}</span>
+                  <div class="font-mono font-semibold text-sm leading-none truncate" :class="field.unknown ? 'text-zinc-500 text-[10px] break-all whitespace-normal' : field.color">
+                    {{ field.value }}<span v-if="field.unit && !field.unknown" class="text-[11px] font-normal text-zinc-500 ml-0.5">{{ field.unit }}</span>
                   </div>
                 </div>
               </div>
