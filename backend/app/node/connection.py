@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -46,7 +47,8 @@ class NodeConnection:
             await self._mc.start_auto_message_fetching()
             self._subscribe()
             await self._initial_sync()
-            logger.info(f'Node {self.node_id}: connected')
+            await self._mc.commands.set_time(int(time.time()))
+            logger.info(f'Node {self.node_id}: connected and clock synced')
 
         except Exception:
             logger.exception(f'Node {self.node_id}: connection failed')

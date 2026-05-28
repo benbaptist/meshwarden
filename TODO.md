@@ -13,8 +13,11 @@
         - Render telemetry beautifully, instead of just showing JSON. render unknown telemetry data gracefully somehow too
     - Repeater admin overhaul
         - Again, another 'page' (within that panel) that you can click into, not just apart of the Info page, complete with its own back button 
-        - For mobile viewports, this is a separate page with a button to access it; for desktop-viewports, let's just utilize the currently-unused right panel as the admin panel.
-        - This page/panel will only show the admin login area until that part is completed. Ensure this handles gracefully when repeater rejects auth or if an admin session expires. Please see MeshCore docs for more detail on how this is handled and ensure it's handled correctly. 
+        - For mobile viewports, this is a separate page with a button to access it; for desktop-viewports, let's just utilize the currently-unused right panel as the admin panel, always visible, starting with login
+        - Auth overhaul: 
+            - This page/panel will only show the admin login area until that part is completed. Ensure this handles gracefully when repeater rejects auth or if an admin session expires. Please see MeshCore docs for more detail on how this is handled and ensure it's handled correctly. 
+            - Auth should be remembered by the node/whatever handles it until it needs to be expired for one reason or another
+            - Login password thing shoudl be centered vertically and horizontally and look nice
         - Ping and Request Telemetry make no sense for the Admin; neither is explicitly admin-related at all. Remove.
         - Actually implement real admin functionality/remote management functions that MeshCore repeaters support
             - Request detailed status
