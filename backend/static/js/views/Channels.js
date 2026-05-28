@@ -1,4 +1,4 @@
-import { defineComponent, ref, onMounted } from 'vue'
+import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNodesStore } from '../stores/nodes.js'
 import { useMessagesStore } from '../stores/messages.js'
@@ -14,6 +14,13 @@ export default defineComponent({
     const channels = ref([])
     const loading = ref(false)
     const error = ref(null)
+    const search = ref('')
+
+    const filtered = computed(() => {
+      if (!search.value.trim()) return channels.value
+      const q = search.value.trim().toLowerCase()
+      return channels.value.filter((ch) => displayName(ch).toLowerCase().includes(q))
+    })
 
     function displayName(ch) {
       const name = (ch.channel_name || '').trim()
@@ -67,14 +74,24 @@ export default defineComponent({
 
     onMounted(load)
 
-    return { channels, loading, error, displayName, unread, lastMessage, fmtTime, nodes, router }
+    return { channels, filtered, loading, error, search, displayName, unread, lastMessage, fmtTime, nodes, router }
   },
   template: `
     <div class="h-full flex flex-col">
       <!-- Header -->
       <div class="px-4 py-4 border-b border-white/[0.06] flex items-center gap-3 flex-shrink-0">
-        <Icon name="hashtag" :size="18" class="text-zinc-500" />
+        <Icon name="hashtag" :size="18" class="text-zinc-500 flex-shrink-0" />
         <h1 class="text-sm font-semibold text-zinc-100">Channels</h1>
+        <div class="relative flex-1 max-w-xs ml-auto">
+          <Icon name="magnifying-glass" :size="13" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" />
+          <input
+            v-model="search"
+            type="text"
+            placeholder="Search…"
+            class="w-full pl-7 pr-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none transition-all"
+            style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
+          />
+        </div>
       </div>
 
       <!-- Content -->
@@ -103,10 +120,15 @@ export default defineComponent({
           <p class="text-sm">No channels found on this node.</p>
         </div>
 
+        <!-- No search results -->
+        <div v-else-if="filtered.length === 0 && search" class="flex flex-col items-center justify-center h-32 text-zinc-500 text-sm">
+          No channels match "{{ search }}"
+        </div>
+
         <!-- Channel list -->
         <ul v-else>
           <li
-            v-for="ch in channels"
+            v-for="ch in filtered"
             :key="ch.channel_idx"
             @click="router.push('/channels/' + ch.channel_idx)"
             class="flex items-center gap-3 px-4 min-h-[56px] border-b border-white/[0.04] cursor-pointer active:bg-white/[0.04] transition-colors hover:bg-white/[0.03]"
