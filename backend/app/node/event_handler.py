@@ -54,6 +54,8 @@ class EventHandler:
             EventType.MSG_SENT: self._on_msg_sent,
             EventType.ACK: self._on_ack,
             EventType.SELF_INFO: self._on_self_info,
+            EventType.LOGIN_SUCCESS: self._on_login_success,
+            EventType.LOGIN_FAILED: self._on_login_failed,
         }
 
         handler = dispatch.get(event.type)
@@ -302,6 +304,40 @@ class EventHandler:
             'node_id': self.node_id,
             'contact_id': contact_id,
             'data': p,
+        })
+
+    def _on_login_success(self, event, db, socketio) -> None:
+        from ..db.models import Contact
+        p = event.payload
+        pubkey_prefix = p.get('pubkey_prefix', '')
+        contact = None
+        if pubkey_prefix:
+            contact = db.session.execute(
+                db.select(Contact).filter(
+                    Contact.node_id == self.node_id,
+                    Contact.public_key.like(pubkey_prefix + '%'),
+                )
+            ).scalar_one_or_none()
+        socketio.emit('admin:login_success', {
+            'node_id': self.node_id,
+            'contact_id': contact.id if contact else None,
+        })
+
+    def _on_login_failed(self, event, db, socketio) -> None:
+        from ..db.models import Contact
+        p = event.payload
+        pubkey_prefix = p.get('pubkey_prefix', '')
+        contact = None
+        if pubkey_prefix:
+            contact = db.session.execute(
+                db.select(Contact).filter(
+                    Contact.node_id == self.node_id,
+                    Contact.public_key.like(pubkey_prefix + '%'),
+                )
+            ).scalar_one_or_none()
+        socketio.emit('admin:login_failed', {
+            'node_id': self.node_id,
+            'contact_id': contact.id if contact else None,
         })
 
     def _on_path_update(self, event, db, socketio) -> None:

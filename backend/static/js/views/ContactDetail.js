@@ -35,24 +35,24 @@ function fmtUptime(s) {
 }
 
 const TELEMETRY_FIELD_META = {
-  temperature:    { label: 'Temperature',    unit: '\u00b0C',  fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
-  temp:           { label: 'Temperature',    unit: '\u00b0C',  fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
-  humidity:       { label: 'Humidity',       unit: '%',   fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
-  pressure:       { label: 'Pressure',       unit: 'hPa', fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
-  voltage:        { label: 'Voltage',        unit: 'V',   fmt: (v) => typeof v === 'number' ? v.toFixed(2) : v },
-  battery_v:      { label: 'Battery',        unit: 'V',   fmt: (v) => typeof v === 'number' ? v.toFixed(2) : v },
-  battery:        { label: 'Battery',        unit: '%',   fmt: (v) => typeof v === 'number' ? Math.round(v) : v },
-  altitude:       { label: 'Altitude',       unit: 'm',   fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
-  latitude:       { label: 'Latitude',       unit: '\u00b0',   fmt: (v) => typeof v === 'number' ? v.toFixed(5) : v },
-  longitude:      { label: 'Longitude',      unit: '\u00b0',   fmt: (v) => typeof v === 'number' ? v.toFixed(5) : v },
-  uptime:         { label: 'Uptime',         unit: '',    fmt: fmtUptime },
-  uptime_secs:    { label: 'Uptime',         unit: '',    fmt: fmtUptime },
-  rssi:           { label: 'RSSI',           unit: 'dBm', fmt: (v) => v },
-  snr:            { label: 'SNR',            unit: 'dB',  fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
-  tx_power:       { label: 'TX Power',       unit: 'dBm', fmt: (v) => v },
-  luminosity:     { label: 'Luminosity',     unit: 'lux', fmt: (v) => v },
-  power:          { label: 'Power',          unit: 'W',   fmt: (v) => typeof v === 'number' ? v.toFixed(2) : v },
-  noise_floor:    { label: 'Noise Floor',    unit: 'dB',  fmt: (v) => v },
+  temperature:    { label: 'Temperature',    unit: '\u00b0C',  fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v,  color: 'text-orange-300', bg: 'rgba(251,146,60,0.08)',  border: 'rgba(251,146,60,0.2)' },
+  temp:           { label: 'Temperature',    unit: '\u00b0C',  fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v,  color: 'text-orange-300', bg: 'rgba(251,146,60,0.08)',  border: 'rgba(251,146,60,0.2)' },
+  humidity:       { label: 'Humidity',       unit: '%',   fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v,  color: 'text-blue-300',   bg: 'rgba(96,165,250,0.08)',  border: 'rgba(96,165,250,0.2)' },
+  pressure:       { label: 'Pressure',       unit: 'hPa', fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v,  color: 'text-zinc-300',   bg: null, border: null },
+  voltage:        { label: 'Voltage',        unit: 'V',   fmt: (v) => typeof v === 'number' ? v.toFixed(2) : v,  color: 'text-emerald-300',bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
+  battery_v:      { label: 'Battery',        unit: 'V',   fmt: (v) => typeof v === 'number' ? v.toFixed(2) : v,  color: 'text-emerald-300',bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
+  battery:        { label: 'Battery',        unit: '%',   fmt: (v) => typeof v === 'number' ? Math.round(v) : v, color: 'text-emerald-300',bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
+  altitude:       { label: 'Altitude',       unit: 'm',   fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v,  color: 'text-zinc-300',   bg: null, border: null },
+  latitude:       { label: 'Latitude',       unit: '\u00b0',   fmt: (v) => typeof v === 'number' ? v.toFixed(5) : v,  color: 'text-cyan-300',   bg: 'rgba(34,211,238,0.08)', border: 'rgba(34,211,238,0.2)' },
+  longitude:      { label: 'Longitude',      unit: '\u00b0',   fmt: (v) => typeof v === 'number' ? v.toFixed(5) : v,  color: 'text-cyan-300',   bg: 'rgba(34,211,238,0.08)', border: 'rgba(34,211,238,0.2)' },
+  uptime:         { label: 'Uptime',         unit: '',    fmt: fmtUptime,                                           color: 'text-violet-300', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.2)' },
+  uptime_secs:    { label: 'Uptime',         unit: '',    fmt: fmtUptime,                                           color: 'text-violet-300', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.2)' },
+  rssi:           { label: 'RSSI',           unit: 'dBm', fmt: (v) => v,                                           color: 'text-violet-300', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.2)' },
+  snr:            { label: 'SNR',            unit: 'dB',  fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v,  color: 'text-violet-300', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.2)' },
+  tx_power:       { label: 'TX Power',       unit: 'dBm', fmt: (v) => v,                                           color: 'text-amber-300',  bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+  luminosity:     { label: 'Luminosity',     unit: 'lux', fmt: (v) => v,                                           color: 'text-amber-300',  bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+  power:          { label: 'Power',          unit: 'W',   fmt: (v) => typeof v === 'number' ? v.toFixed(2) : v,  color: 'text-amber-300',  bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+  noise_floor:    { label: 'Noise Floor',    unit: 'dB',  fmt: (v) => v,                                           color: 'text-zinc-400',   bg: null, border: null },
 }
 
 function renderTelemetryEntry(rec) {
@@ -73,6 +73,10 @@ function renderTelemetryEntry(rec) {
       label: meta?.label ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       value: displayVal,
       unit: meta?.unit ?? '',
+      color: meta?.color ?? 'text-zinc-300',
+      bg: meta?.bg ?? null,
+      border: meta?.border ?? null,
+      unknown: !meta,
     }
   })
 }
@@ -150,6 +154,7 @@ export default defineComponent({
     const cliSending = ref(false)
     const cliHistory = ref([])
     const settingInputs = ref({})
+    let loginTimeout = null
 
     const thread = computed(() => messages.threads[threadKey] || [])
     const isRepeater = computed(() => contact.value?.contact_type_name === 'REP')
@@ -352,16 +357,37 @@ export default defineComponent({
     async function doLogin() {
       if (!adminPassword.value || adminLoggingIn.value) return
       adminLoggingIn.value = true
+      const pwd = adminPassword.value
+      adminPassword.value = ''
+      if (loginTimeout) { clearTimeout(loginTimeout); loginTimeout = null }
       try {
-        await contacts.loginContact(contactId, adminPassword.value)
-        loggedIn.value = true
-        adminPassword.value = ''
-        toast.info('Login sent to repeater')
+        await contacts.loginContact(contactId, pwd)
+        loginTimeout = setTimeout(() => {
+          if (adminLoggingIn.value) {
+            adminLoggingIn.value = false
+            toast.error('No login response from repeater')
+          }
+        }, 15000)
       } catch (e) {
-        toast.error(e.message || 'Login failed')
-      } finally {
         adminLoggingIn.value = false
+        toast.error(e.message || 'Login failed')
       }
+    }
+
+    function handleLoginSuccess(data) {
+      if (data.contact_id !== contactId) return
+      if (loginTimeout) { clearTimeout(loginTimeout); loginTimeout = null }
+      loggedIn.value = true
+      adminLoggingIn.value = false
+      toast.info('Admin access granted')
+    }
+
+    function handleLoginFailed(data) {
+      if (data.contact_id !== contactId) return
+      if (loginTimeout) { clearTimeout(loginTimeout); loginTimeout = null }
+      loggedIn.value = false
+      adminLoggingIn.value = false
+      toast.error('Login rejected \u2014 incorrect password')
     }
 
     async function doLogout() {
@@ -486,18 +512,23 @@ export default defineComponent({
         socket.on('message:received', handleMessageReceived)
         socket.on('node:status', handleAdminStatus)
         socket.on('admin:acl', handleAdminAcl)
+        socket.on('admin:login_success', handleLoginSuccess)
+        socket.on('admin:login_failed', handleLoginFailed)
       }
     })
 
     onBeforeUnmount(() => {
       if (signalChart) signalChart.destroy()
       if (telemetryTimeout) clearTimeout(telemetryTimeout)
+      if (loginTimeout) clearTimeout(loginTimeout)
       const socket = getSocket()
       if (socket) {
         socket.off('telemetry:received', handleTelemetryReceived)
         socket.off('message:received', handleMessageReceived)
         socket.off('node:status', handleAdminStatus)
         socket.off('admin:acl', handleAdminAcl)
+        socket.off('admin:login_success', handleLoginSuccess)
+        socket.off('admin:login_failed', handleLoginFailed)
       }
     })
 
@@ -539,10 +570,23 @@ export default defineComponent({
           </template>
 
           <template v-else-if="currentPage === 'admin'">
-            <div class="flex-1">
+            <!-- Mobile: "Repeater Admin" title; Desktop: show normal contact header (admin is always right panel) -->
+            <div class="md:hidden flex-1">
               <div class="text-sm font-semibold text-white">Repeater Admin</div>
               <div v-if="loggedIn" class="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
                 <Icon name="check-circle" :size="10" /> Authenticated
+              </div>
+            </div>
+            <div class="hidden md:flex flex-1 items-center gap-3">
+              <div
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                :style="{ background: avatarStyle(contact) }"
+              >{{ (contact.adv_name || contact.short_name || '?')[0].toUpperCase() }}</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-white truncate">{{ contact.adv_name || contact.short_name || 'Unknown' }}</div>
+                <span :class="['text-[10px] font-medium px-1.5 py-0.5 rounded-md border', TYPE_META[contact.contact_type_name]?.cls || TYPE_META.NONE.cls]">
+                  {{ TYPE_META[contact.contact_type_name]?.label || contact.contact_type_name }}
+                </span>
               </div>
             </div>
           </template>
@@ -595,11 +639,18 @@ export default defineComponent({
                   style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"
                 >
                   <div class="text-[10px] text-zinc-600 mb-2">{{ new Date(rec.timestamp).toLocaleString() }}</div>
-                  <div class="grid grid-cols-2 gap-x-4 gap-y-2">
-                    <div v-for="field in renderTelemetryEntry(rec)" :key="field.key">
-                      <div class="text-[10px] text-zinc-600 uppercase tracking-wider">{{ field.label }}</div>
-                      <div class="text-sm font-mono text-zinc-200 mt-0.5">
-                        {{ field.value }}<span v-if="field.unit" class="text-zinc-500 text-xs ml-0.5">{{ field.unit }}</span>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div
+                      v-for="field in renderTelemetryEntry(rec)"
+                      :key="field.key"
+                      class="rounded-lg px-2.5 py-2"
+                      :style="{ background: field.bg || 'rgba(255,255,255,0.03)', border: '1px solid ' + (field.border || 'rgba(255,255,255,0.06)') }"
+                    >
+                      <div class="text-[10px] text-zinc-500 mb-0.5 flex items-center gap-1">
+                        {{ field.label }}<span v-if="field.unknown" class="text-[9px] text-zinc-700">(unknown)</span>
+                      </div>
+                      <div class="font-mono font-semibold text-sm leading-none" :class="field.color">
+                        {{ field.value }}<span v-if="field.unit" class="text-[11px] font-normal text-zinc-500 ml-0.5">{{ field.unit }}</span>
                       </div>
                     </div>
                   </div>
@@ -644,8 +695,8 @@ export default defineComponent({
           </div>
         </div>
 
-        <!-- ADMIN PAGE -->
-        <div v-else-if="currentPage === 'admin'" class="flex-1 overflow-y-auto scrollbar-none px-4 py-5 space-y-5">
+        <!-- ADMIN PAGE — content moved to right panel in MAIN LAYOUT below -->
+        <div v-else-if="false && currentPage === 'admin'" class="flex-1 overflow-y-auto scrollbar-none px-4 py-5 space-y-5">
           <template v-if="!loggedIn">
             <div class="rounded-2xl p-5" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);">
               <div class="text-sm font-semibold text-zinc-100 mb-1">Admin Login</div>
@@ -737,7 +788,7 @@ export default defineComponent({
                     @click="sendCliCmd()"
                     :disabled="!cliInput.trim() || cliSending"
                     class="text-zinc-600 hover:text-violet-400 transition-colors disabled:opacity-40"
-                  ><Icon name="paper-airplane" :size="15" /></button>
+                  ><Icon name="send" :size="15" /></button>
                 </div>
               </div>
             </div>
@@ -808,8 +859,7 @@ export default defineComponent({
           <div
             :class="[
               'flex-col border-r border-white/[0.05] overflow-y-auto scrollbar-none',
-              (activeTab === 'info' || isRepeater) ? 'flex flex-1' : 'hidden',
-              'md:flex md:flex-initial md:w-72 md:flex-shrink-0'
+              (isRepeater ? currentPage !== 'admin' : activeTab === 'info') ? 'flex flex-1 md:flex-initial md:w-72 md:flex-shrink-0' : 'hidden md:flex md:flex-initial md:w-72 md:flex-shrink-0'
             ]"
             style="background: rgba(9,9,15,0.4);"
           >
@@ -872,13 +922,22 @@ export default defineComponent({
 
             <!-- Latest telemetry -->
             <div v-if="hasTelemetry && telemetry.length" class="px-5 py-4 border-b border-white/[0.04]">
-              <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-1">Latest Telemetry</div>
-              <div class="text-[10px] text-zinc-700 mb-2">{{ new Date(telemetry[0].timestamp).toLocaleString() }}</div>
-              <div class="grid grid-cols-2 gap-x-4 gap-y-2">
-                <div v-for="field in renderTelemetryEntry(telemetry[0])" :key="field.key">
-                  <div class="text-[10px] text-zinc-600">{{ field.label }}</div>
-                  <div class="text-sm font-mono text-zinc-200 mt-0.5">
-                    {{ field.value }}<span v-if="field.unit" class="text-zinc-500 text-xs ml-0.5">{{ field.unit }}</span>
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Latest Telemetry</div>
+                <div class="text-[10px] text-zinc-700">{{ new Date(telemetry[0].timestamp).toLocaleString() }}</div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div
+                  v-for="field in renderTelemetryEntry(telemetry[0])"
+                  :key="field.key"
+                  class="rounded-lg px-2.5 py-2"
+                  :style="{ background: field.bg || 'rgba(255,255,255,0.03)', border: '1px solid ' + (field.border || 'rgba(255,255,255,0.06)') }"
+                >
+                  <div class="text-[10px] text-zinc-500 mb-0.5 flex items-center gap-1">
+                    {{ field.label }}<span v-if="field.unknown" class="text-[9px] text-zinc-700">(unknown)</span>
+                  </div>
+                  <div class="font-mono font-semibold text-sm leading-none" :class="field.color">
+                    {{ field.value }}<span v-if="field.unit" class="text-[11px] font-normal text-zinc-500 ml-0.5">{{ field.unit }}</span>
                   </div>
                 </div>
               </div>
@@ -994,7 +1053,7 @@ export default defineComponent({
               <button
                 v-if="isRepeater"
                 @click="currentPage = 'admin'"
-                class="w-full flex items-center justify-between py-3 text-sm text-cyan-400 hover:text-cyan-200 transition-colors"
+                class="md:hidden w-full flex items-center justify-between py-3 text-sm text-cyan-400 hover:text-cyan-200 transition-colors"
               >
                 <div class="flex items-center gap-2.5"><Icon name="cog" :size="16" /> Repeater Admin</div>
                 <Icon name="chevron-right" :size="16" />
@@ -1012,6 +1071,222 @@ export default defineComponent({
             ]"
           >
             <ChatPanel :thread="thread" :sending="sending" :focused="activeTab === 'chat'" @send="sendMsg" />
+          </div>
+
+          <!-- Admin Panel (repeaters only): Mobile = full page when currentPage==='admin'; Desktop = always visible right panel -->
+          <div
+            v-if="isRepeater"
+            :class="currentPage === 'admin' ? 'flex flex-1 flex-col min-w-0' : 'hidden md:flex md:flex-1 md:flex-col md:min-w-0'"
+            style="background: rgba(9,9,15,0.4); border-left: 1px solid rgba(255,255,255,0.05);"
+          >
+            <!-- Desktop panel header -->
+            <div class="hidden md:flex flex-shrink-0 items-center justify-between px-4 py-3 border-b border-white/[0.05]">
+              <span class="text-sm font-semibold text-white">Repeater Admin</span>
+              <div class="flex items-center gap-3">
+                <div v-if="loggedIn" class="text-[10px] text-emerald-400 flex items-center gap-1">
+                  <Icon name="check-circle" :size="11" /> Authenticated
+                </div>
+                <button v-if="loggedIn" @click="doLogout" class="text-xs text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1">
+                  <Icon name="logout" :size="12" /> Logout
+                </button>
+              </div>
+            </div>
+
+            <!-- NOT LOGGED IN: centered login form -->
+            <div v-if="!loggedIn" class="flex flex-1 items-center justify-center p-6">
+              <div class="w-full max-w-xs space-y-5">
+                <div class="text-center">
+                  <div
+                    class="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style="background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.25);"
+                  >
+                    <Icon name="key" :size="22" class="text-violet-400" />
+                  </div>
+                  <div class="text-sm font-semibold text-zinc-100 mb-1">Admin Login</div>
+                  <div class="text-xs text-zinc-500 leading-relaxed">Authenticate to manage this repeater remotely.</div>
+                </div>
+                <form @submit.prevent="doLogin" class="space-y-3">
+                  <input
+                    v-model="adminPassword"
+                    type="password"
+                    placeholder="Admin password\u2026"
+                    class="w-full px-3.5 py-2.5 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none"
+                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);"
+                  />
+                  <button
+                    type="submit"
+                    :disabled="!adminPassword || adminLoggingIn"
+                    class="w-full px-3 py-2.5 rounded-xl text-sm text-white font-semibold transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                    style="background: linear-gradient(135deg, #7c3aed, #9333ea);"
+                  >
+                    <Spinner v-if="adminLoggingIn" />
+                    <Icon v-else name="key" :size="15" />
+                    {{ adminLoggingIn ? 'Waiting for response\u2026' : 'Login' }}
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- LOGGED IN: admin content -->
+            <div v-else class="flex-1 overflow-y-auto scrollbar-none px-4 py-5 space-y-5">
+              <!-- Mobile auth bar (desktop shows in panel header) -->
+              <div class="flex md:hidden items-center justify-between">
+                <div class="text-xs text-emerald-400 flex items-center gap-1.5">
+                  <Icon name="check-circle" :size="13" /> Authenticated as admin
+                </div>
+                <button @click="doLogout" class="text-xs text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1">
+                  <Icon name="logout" :size="12" /> Logout
+                </button>
+              </div>
+
+              <!-- Quick Actions -->
+              <div class="flex flex-wrap gap-2">
+                <button
+                  @click="doRequestAdminStatus"
+                  :disabled="fetchingAdminStatus"
+                  class="h-8 px-3 flex items-center gap-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                >
+                  <Spinner v-if="fetchingAdminStatus" /><Icon v-else name="cpu-chip" :size="13" />
+                  {{ fetchingAdminStatus ? 'Fetching\u2026' : 'Request Status' }}
+                </button>
+                <button
+                  @click="doRequestAdminAcl"
+                  :disabled="fetchingAdminAcl"
+                  class="h-8 px-3 flex items-center gap-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40 text-violet-400 hover:text-violet-300 hover:bg-violet-500/10"
+                >
+                  <Spinner v-if="fetchingAdminAcl" /><Icon v-else name="key" :size="13" />
+                  {{ fetchingAdminAcl ? 'Fetching\u2026' : 'Request ACL' }}
+                </button>
+                <button
+                  @click="sendCliCmd('advert')"
+                  class="h-8 px-3 flex items-center gap-1.5 rounded-lg text-xs font-medium transition-colors text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                >
+                  <Icon name="wifi" :size="13" /> Send Advert
+                </button>
+                <button
+                  @click="sendCliCmd('reboot')"
+                  class="h-8 px-3 flex items-center gap-1.5 rounded-lg text-xs font-medium transition-colors text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+                >
+                  <Icon name="refresh" :size="13" /> Reboot
+                </button>
+              </div>
+
+              <!-- Node Status -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Node Status</div>
+                  <button
+                    @click="doRequestAdminStatus"
+                    :disabled="fetchingAdminStatus"
+                    class="text-xs text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1 disabled:opacity-40"
+                  ><Icon name="refresh" :size="12" /> {{ fetchingAdminStatus ? 'Waiting\u2026' : 'Fetch' }}</button>
+                </div>
+                <div class="rounded-xl px-4 py-3 min-h-[56px] flex items-center" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                  <div v-if="fetchingAdminStatus" class="flex items-center gap-2 text-xs text-zinc-600">
+                    <Spinner /> Waiting for response\u2026
+                  </div>
+                  <div v-else-if="!adminStatus" class="text-xs text-zinc-700">
+                    Click Fetch to request status from the node.
+                  </div>
+                  <div v-else class="w-full grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div v-for="(val, key) in adminStatus" :key="key">
+                      <div class="text-[10px] text-zinc-600 uppercase tracking-wider">{{ fmtStatusKey(key) }}</div>
+                      <div class="text-sm font-mono text-zinc-200 mt-0.5">{{ fmtStatusValue(key, val) }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CLI -->
+              <div>
+                <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-2">Command Line</div>
+                <div class="rounded-xl overflow-hidden" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.07);">
+                  <div class="h-52 overflow-y-auto scrollbar-none p-3 space-y-0.5 font-mono text-xs">
+                    <div v-if="!cliHistory.length" class="text-zinc-700 py-4 text-center">No commands sent yet.</div>
+                    <div
+                      v-for="(entry, i) in cliHistory"
+                      :key="i"
+                      class="leading-5"
+                      :class="entry.type === 'sent' ? 'text-violet-300' : 'text-zinc-300'"
+                    >
+                      <span class="text-zinc-700 select-none mr-1">{{ entry.type === 'sent' ? '>' : '<' }}</span>{{ entry.text }}
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 px-3 py-2.5 border-t border-white/[0.06]">
+                    <span class="text-zinc-600 font-mono text-xs select-none">$</span>
+                    <input
+                      v-model="cliInput"
+                      @keydown.enter.prevent="sendCliCmd()"
+                      type="text"
+                      placeholder="Enter command\u2026"
+                      class="flex-1 bg-transparent text-xs text-zinc-100 placeholder-zinc-700 outline-none font-mono"
+                    />
+                    <button
+                      @click="sendCliCmd()"
+                      :disabled="!cliInput.trim() || cliSending"
+                      class="text-zinc-600 hover:text-violet-400 transition-colors disabled:opacity-40"
+                    ><Icon name="send" :size="15" /></button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Settings -->
+              <div>
+                <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mb-3">Settings</div>
+                <div class="space-y-2">
+                  <div
+                    v-for="s in ADMIN_SETTINGS"
+                    :key="s.key"
+                    class="rounded-xl px-3 py-3"
+                    style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);"
+                  >
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs text-zinc-400 font-medium">{{ s.label }}</span>
+                      <button
+                        @click="sendCliCmd(s.getCmd)"
+                        class="text-[10px] text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1"
+                      ><Icon name="refresh" :size="10" /> Fetch</button>
+                    </div>
+                    <div class="flex gap-2">
+                      <input
+                        :value="settingInputs[s.key] || ''"
+                        @input="settingInputs[s.key] = $event.target.value"
+                        type="text"
+                        :placeholder="s.placeholder"
+                        class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-700 outline-none font-mono"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
+                        @keydown.enter.prevent="settingInputs[s.key] && sendCliCmd(s.setPrefix + ' ' + settingInputs[s.key])"
+                      />
+                      <button
+                        @click="settingInputs[s.key] && sendCliCmd(s.setPrefix + ' ' + settingInputs[s.key])"
+                        :disabled="!settingInputs[s.key]"
+                        class="px-2.5 py-1.5 rounded-lg text-xs text-white transition-colors disabled:opacity-40"
+                        style="background: rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.4);"
+                      >Set</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ACL -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Access Control List</div>
+                  <button
+                    @click="doRequestAdminAcl"
+                    :disabled="fetchingAdminAcl"
+                    class="text-xs text-zinc-600 hover:text-zinc-300 transition-colors flex items-center gap-1 disabled:opacity-40"
+                  ><Icon name="refresh" :size="12" /> {{ fetchingAdminAcl ? 'Waiting\u2026' : 'Fetch' }}</button>
+                </div>
+                <div class="rounded-xl px-4 py-3 min-h-[48px] flex items-center" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                  <div v-if="fetchingAdminAcl" class="flex items-center gap-2 text-xs text-zinc-600">
+                    <Spinner /> Waiting\u2026
+                  </div>
+                  <div v-else-if="!adminAcl" class="text-xs text-zinc-700">Click Fetch to request the ACL from the node.</div>
+                  <pre v-else class="text-xs text-zinc-300 font-mono whitespace-pre-wrap break-all w-full">{{ JSON.stringify(adminAcl, null, 2) }}</pre>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </template>
