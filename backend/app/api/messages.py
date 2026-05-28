@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
@@ -6,6 +7,8 @@ from ..auth.utils import require_auth
 from ..db.models import Contact, Message
 from ..extensions import db
 from ..node.manager import node_manager
+
+logger = logging.getLogger(__name__)
 
 messages_bp = Blueprint('messages', __name__)
 
@@ -71,10 +74,11 @@ def send_message():
             node_manager.run_async(_send_chan(conn.mc, channel_idx, text), timeout=15)
             msg.status = 'sent'
             db.session.commit()
-        except Exception as e:
+        except Exception:
+            logger.exception('channel message send failed (node=%d, channel=%d)', node_id, channel_idx)
             msg.status = 'failed'
             db.session.commit()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'Internal server error'}), 500
 
         return jsonify(msg.to_dict()), 201
 
@@ -117,9 +121,10 @@ def send_message():
             msg.expected_ack = raw_ack.hex() if isinstance(raw_ack, bytes) else str(raw_ack)
         msg.status = 'sent'
         db.session.commit()
-    except Exception as e:
+    except Exception:
+        logger.exception('direct message send failed (node=%d, contact=%d)', node_id, contact_id)
         msg.status = 'failed'
         db.session.commit()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
     return jsonify(msg.to_dict()), 201

@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, jsonify, request
 
 from meshcore import EventType
@@ -5,6 +7,8 @@ from ..auth.utils import require_auth
 from ..db.models import Contact, ContactHistory, Group, GroupMembership, Message, PingRecord, TelemetryRecord
 from ..extensions import db
 from ..node.manager import node_manager
+
+logger = logging.getLogger(__name__)
 
 contacts_bp = Blueprint('contacts', __name__)
 
@@ -166,8 +170,9 @@ def request_telemetry(contact_id: int):
             node_manager.run_async(conn.mc.commands.send_login(contact.public_key, password), timeout=10)
         node_manager.run_async(conn.mc.commands.send_telemetry_req(contact_dict), timeout=10)
         return jsonify({'ok': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('telemetry request failed for contact %d', contact_id)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 def _build_contact_dict(contact):
@@ -217,7 +222,7 @@ def ping_contact(contact_id: int):
         latency_ms = round((time.monotonic() - sent_at) * 1000)
         success = True
     except Exception:
-        pass
+        logger.exception('ping failed for contact %d', contact_id)
 
     record = PingRecord(
         node_id=contact.node_id,
@@ -247,8 +252,9 @@ def reset_contact_path(contact_id: int):
         contact.out_path = None
         db.session.commit()
         return jsonify({'ok': True, 'contact': contact.to_dict()})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('reset_path failed for contact %d', contact_id)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @contacts_bp.post('/<int:contact_id>/set_path')
@@ -278,8 +284,9 @@ def set_contact_path(contact_id: int):
         contact.out_path = path_hex or None
         db.session.commit()
         return jsonify({'ok': True, 'contact': contact.to_dict()})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('set_path failed for contact %d', contact_id)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @contacts_bp.post('/<int:contact_id>/login')
@@ -305,8 +312,9 @@ def login_contact(contact_id: int):
         if result.type == EventType.LOGIN_SUCCESS:
             return jsonify({'ok': True})
         return jsonify({'error': 'Authentication rejected by repeater'}), 401
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('login failed for contact %d', contact_id)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @contacts_bp.post('/<int:contact_id>/logout')
@@ -323,8 +331,9 @@ def logout_contact(contact_id: int):
     try:
         node_manager.run_async(conn.mc.commands.send_logout(contact.public_key), timeout=10)
         return jsonify({'ok': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('logout failed for contact %d', contact_id)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @contacts_bp.post('/<int:contact_id>/admin/status')
@@ -343,8 +352,9 @@ def admin_request_status(contact_id: int):
             conn.mc.commands.req_status_sync(_build_contact_dict(contact), timeout=0), timeout=30
         )
         return jsonify({'ok': True, 'status': result})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('admin status request failed for contact %d', contact_id)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @contacts_bp.post('/<int:contact_id>/admin/acl')
@@ -363,8 +373,9 @@ def admin_request_acl(contact_id: int):
             conn.mc.commands.req_acl(_build_contact_dict(contact), timeout=0), timeout=10
         )
         return jsonify({'ok': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('admin ACL request failed for contact %d', contact_id)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @contacts_bp.post('/<int:contact_id>/admin/cmd')
@@ -388,6 +399,7 @@ def admin_send_cmd(contact_id: int):
             conn.mc.commands.send_cmd(_build_contact_dict(contact), cmd), timeout=10
         )
         return jsonify({'ok': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('admin cmd failed for contact %d', contact_id)
+        return jsonify({'error': 'Internal server error'}), 500
 

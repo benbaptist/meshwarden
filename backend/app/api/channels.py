@@ -1,7 +1,11 @@
+import logging
+
 from flask import Blueprint, jsonify, request
 
 from ..auth.utils import require_auth
 from ..node.manager import node_manager
+
+logger = logging.getLogger(__name__)
 
 channels_bp = Blueprint('channels', __name__)
 
@@ -36,5 +40,6 @@ def list_channels():
     try:
         channels = node_manager.run_async(_fetch(conn.mc), timeout=15)
         return jsonify(channels)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('fetch channels failed for node %d', node_id)
+        return jsonify({'error': 'Internal server error'}), 500

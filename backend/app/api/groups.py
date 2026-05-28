@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
@@ -5,6 +7,8 @@ from ..auth.utils import require_auth
 from ..db.models import AutomationRule, Contact, Group, GroupMembership
 from ..extensions import db, scheduler
 from ..node.manager import node_manager
+
+logger = logging.getLogger(__name__)
 
 groups_bp = Blueprint('groups', __name__)
 
@@ -202,7 +206,7 @@ def _run_automation(rule_id: int) -> None:
                     timeout=10,
                 )
             except Exception:
-                pass
+                logger.exception('automation poll failed (rule=%d, contact=%d)', rule.id, contact.id)
 
         from datetime import datetime, timezone
         rule.last_run = datetime.now(timezone.utc)

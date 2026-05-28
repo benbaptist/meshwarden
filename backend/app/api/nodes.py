@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from flask import Blueprint, g, jsonify, request
 
@@ -6,6 +7,8 @@ from ..auth.utils import require_auth
 from ..db.models import Node
 from ..extensions import db
 from ..node.manager import node_manager
+
+logger = logging.getLogger(__name__)
 
 nodes_bp = Blueprint('nodes', __name__)
 
@@ -149,8 +152,9 @@ def get_stats(node_id: int):
     try:
         stats = node_manager.run_async(_fetch(conn.mc), timeout=15)
         return jsonify(stats)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('fetch stats failed for node %d', node_id)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @nodes_bp.put('/<int:node_id>/config')
@@ -183,5 +187,6 @@ def push_config(node_id: int):
     try:
         results = node_manager.run_async(_push(conn.mc, data), timeout=20)
         return jsonify(results)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception('push config failed for node %d', node_id)
+        return jsonify({'error': 'Internal server error'}), 500
