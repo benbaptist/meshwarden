@@ -1,4 +1,5 @@
 import logging
+import time
 
 from flask import Blueprint, jsonify, request
 
@@ -202,8 +203,6 @@ def contact_pings(contact_id: int):
 @contacts_bp.post('/<int:contact_id>/ping')
 @require_auth
 def ping_contact(contact_id: int):
-    import time
-
     contact = db.session.get(Contact, contact_id)
     if not contact:
         return jsonify({'error': 'Contact not found'}), 404
@@ -212,12 +211,15 @@ def ping_contact(contact_id: int):
     if not conn or not conn.is_connected:
         return jsonify({'error': 'Node not connected'}), 503
 
+    _PING_TIMEOUT = 30  # seconds to wait for a mesh response
+
     sent_at = time.monotonic()
     success = False
     latency_ms = None
     try:
         node_manager.run_async(
-            conn.mc.commands.req_status_sync(_build_contact_dict(contact), timeout=0), timeout=5
+            conn.mc.commands.req_status_sync(_build_contact_dict(contact), timeout=_PING_TIMEOUT),
+            timeout=_PING_TIMEOUT + 5,
         )
         latency_ms = round((time.monotonic() - sent_at) * 1000)
         success = True
