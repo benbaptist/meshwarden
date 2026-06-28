@@ -21,3 +21,5 @@
     - ping commands
     - weather commands
     - automated weather alerts
+
+- Offline-ready/self-contained: no externally-loaded deps on cdn's or anything like that
