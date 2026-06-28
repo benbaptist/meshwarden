@@ -1,4 +1,4 @@
-import { defineComponent, computed } from 'vue'
+import { defineComponent, computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth.js'
 import { useMessagesStore } from '../../stores/messages.js'
@@ -23,12 +23,17 @@ export default defineComponent({
       Object.values(messages.unreadCounts).reduce((s, n) => s + n, 0)
     )
 
+    const version = ref(null)
+    onMounted(() => {
+      fetch('/api/version').then(r => r.json()).then(d => { version.value = d.version }).catch(() => {})
+    })
+
     function isActive(path) {
       if (path === '/') return route.path === '/'
       return route.path.startsWith(path)
     }
 
-    return { NAV, auth, isActive, totalUnread }
+    return { NAV, auth, isActive, totalUnread, version }
   },
   template: `
     <aside
@@ -69,6 +74,7 @@ export default defineComponent({
       <!-- User / logout -->
       <div class="px-4 py-4 border-t border-white/[0.06]">
         <div class="text-xs text-zinc-600 mb-2 truncate">{{ auth.user?.username }}</div>
+        <div v-if="version" class="text-[10px] text-zinc-700 mb-2">v{{ version }}</div>
         <button
           @click="auth.logout()"
           class="flex items-center gap-2 text-xs text-zinc-600 hover:text-rose-400 transition-colors"
