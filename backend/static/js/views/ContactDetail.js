@@ -778,6 +778,7 @@ export default defineComponent({
                     v-model="cliInput"
                     @keydown.enter.prevent="sendCliCmd()"
                     type="text"
+                    autocomplete="new-password"
                     placeholder="Enter command\u2026"
                     class="flex-1 bg-transparent text-xs text-zinc-100 placeholder-zinc-700 outline-none font-mono"
                   />
@@ -812,6 +813,7 @@ export default defineComponent({
                       :value="settingInputs[s.key] || ''"
                       @input="settingInputs[s.key] = $event.target.value"
                       type="text"
+                      autocomplete="new-password"
                       :placeholder="s.placeholder"
                       class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-700 outline-none font-mono"
                       style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
@@ -963,6 +965,7 @@ export default defineComponent({
                 <input
                   v-model="newPath"
                   type="text"
+                  autocomplete="new-password"
                   placeholder="Set path hex\u2026"
                   class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none font-mono"
                   style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
@@ -1004,6 +1007,7 @@ export default defineComponent({
                     @keydown.enter.prevent="selectFirstGroupOption"
                     @keydown.escape="closeGroupSearch"
                     type="text"
+                    autocomplete="new-password"
                     placeholder="Add or create group\u2026"
                     class="flex-1 bg-transparent text-xs text-zinc-100 placeholder-zinc-600 outline-none"
                   />
@@ -1216,6 +1220,7 @@ export default defineComponent({
                       v-model="cliInput"
                       @keydown.enter.prevent="sendCliCmd()"
                       type="text"
+                      autocomplete="new-password"
                       placeholder="Enter command\u2026"
                       class="flex-1 bg-transparent text-xs text-zinc-100 placeholder-zinc-700 outline-none font-mono"
                     />
@@ -1250,6 +1255,7 @@ export default defineComponent({
                         :value="settingInputs[s.key] || ''"
                         @input="settingInputs[s.key] = $event.target.value"
                         type="text"
+                        autocomplete="new-password"
                         :placeholder="s.placeholder"
                         class="flex-1 px-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-700 outline-none font-mono"
                         style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"

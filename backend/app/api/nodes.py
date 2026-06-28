@@ -124,6 +124,18 @@ def disconnect_node(node_id: int):
     return jsonify({'ok': True})
 
 
+@nodes_bp.post('/<int:node_id>/sync')
+@require_auth
+def sync_node(node_id: int):
+    node = db.session.get(Node, node_id)
+    if not node:
+        return jsonify({'error': 'Node not found'}), 404
+    if not node_manager.is_connected(node_id):
+        return jsonify({'error': 'Node is not connected'}), 409
+    node_manager.sync(node_id)
+    return jsonify({'ok': True})
+
+
 @nodes_bp.get('/<int:node_id>/stats')
 @require_auth
 def get_stats(node_id: int):

@@ -1,9 +1,49 @@
 import os
 import hashlib
+import subprocess
+import logging
 from flask import Flask, send_from_directory, abort, Response
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+
+def _build_version() -> str:
+    """Return a date-based version string derived from the latest git commit date.
+    Format: YYYY.MM.DD[-NNNN] where NNNN is the commit count for that day (>1).
+    Falls back to the static folder mtime if git is unavailable."""
+    try:
+        date_str = subprocess.check_output(
+            ['git', 'log', '-1', '--format=%cd', '--date=short'],
+            stderr=subprocess.DEVNULL,
+            cwd=os.path.dirname(__file__),
+        ).decode().strip()
+        count_str = subprocess.check_output(
+            ['git', 'log', '--after', f'{date_str} 00:00:00', '--before', f'{date_str} 23:59:59', '--format=%H'],
+            stderr=subprocess.DEVNULL,
+            cwd=os.path.dirname(__file__),
+        ).decode().strip()
+        count = len([l for l in count_str.splitlines() if l.strip()])
+        version = date_str.replace('-', '.')
+        if count > 1:
+            version = f'{version}-{count:04d}'
+        return version
+    except Exception:
+        pass
+    # Fallback: use most recent static file mtime
+    try:
+        static_dir = os.path.join(os.path.dirname(__file__), '..', 'static')
+        newest = max(
+            os.path.getmtime(os.path.join(r, f))
+            for r, _, files in os.walk(static_dir)
+            for f in files
+        )
+        from datetime import datetime
+        return datetime.fromtimestamp(newest).strftime('%Y.%m.%d')
+    except Exception:
+        return 'dev'
 
 
 def _apply_migrations(db) -> None:
@@ -29,6 +69,10 @@ def create_app(config_name: str | None = None) -> Flask:
 
     app = Flask(__name__, static_folder='../static', static_url_path='/static')
     app.config.from_object(config[config_name])
+
+    _version = _build_version()
+    app.config['APP_VERSION'] = _version
+    logger.info(f'MeshWarden {_version} starting up')
 
     db.init_app(app)
     socketio.init_app(
@@ -66,6 +110,12 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(groups_bp, url_prefix='/api/groups')
     app.register_blueprint(channels_bp, url_prefix='/api/channels')
     register_handlers(socketio)
+
+    # Version endpoint (unauthenticated — just a build label)
+    @app.route('/api/version')
+    def version():
+        from flask import jsonify
+        return jsonify({'version': app.config['APP_VERSION']})
 
     # Serve manifest + SW at root scope (required for PWA)
     @app.route('/manifest.json')

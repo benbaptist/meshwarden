@@ -42,7 +42,20 @@ export default defineComponent({
       return { sender: null, body: text }
     }
 
-    return { text, threadRef, sortedThread, send, onKeydown, parseChanMsg }
+    function fmtTimestamp(ts) {
+      const d = new Date(ts)
+      const now = new Date()
+      const today = now.toDateString() === d.toDateString()
+      const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+      if (today) return time
+      const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
+      if (yesterday.toDateString() === d.toDateString()) return `Yesterday ${time}`
+      const withinYear = d.getFullYear() === now.getFullYear()
+      const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(withinYear ? {} : { year: 'numeric' }) })
+      return `${date} ${time}`
+    }
+
+    return { text, threadRef, sortedThread, send, onKeydown, parseChanMsg, fmtTimestamp }
   },
   template: `
     <div class="flex flex-col flex-1 min-h-0">
@@ -67,7 +80,7 @@ export default defineComponent({
                  class="text-[11px] font-medium text-violet-300/70 mb-0.5">{{ parseChanMsg(msg.text).sender }}</div>
             <div>{{ msg.direction === 'in' && msg.msg_type === 'channel' ? parseChanMsg(msg.text).body : msg.text }}</div>
             <div class="flex items-center gap-1.5 mt-1" :class="msg.direction === 'out' ? 'justify-end' : 'justify-start'">
-              <span class="text-[10px] opacity-60">{{ new Date(msg.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
+              <span class="text-[10px] opacity-60">{{ fmtTimestamp(msg.timestamp) }}</span>
               <template v-if="msg.direction === 'out'">
                 <span
                   :title="msg.status === 'acked' ? 'Received by destination' : msg.status === 'sent' ? 'Seen by mesh' : msg.status === 'failed' ? 'Failed to send' : 'Sending…'"

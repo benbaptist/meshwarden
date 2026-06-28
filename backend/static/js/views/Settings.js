@@ -1,6 +1,7 @@
 import { defineComponent, ref } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
 import { useNodesStore } from '../stores/nodes.js'
+import { useContactsStore } from '../stores/contacts.js'
 import { useToast } from '../components/shared/Toast.js'
 
 const EMPTY_FORM = () => ({ name: '', connection_type: 'tcp', host: '', port: 5525, device_path: '' })
@@ -10,7 +11,23 @@ export default defineComponent({
   setup() {
     const auth = useAuthStore()
     const nodes = useNodesStore()
+    const contacts = useContactsStore()
     const toast = useToast()
+
+    // Per-node sync
+    const syncing = ref({})
+    async function reloadNode(node) {
+      syncing.value[node.id] = true
+      try {
+        await nodes.sync(node.id)
+        await contacts.fetchAll()
+        toast.success(`${node.name} reloaded`)
+      } catch (e) {
+        toast.error(e.message || 'Reload failed')
+      } finally {
+        syncing.value[node.id] = false
+      }
+    }
 
     // Password
     const currentPassword = ref('')
@@ -107,7 +124,7 @@ export default defineComponent({
       auth, nodes,
       currentPassword, newPassword, confirmPassword, savingPassword, changePassword,
       showModal, editingNode, nodeForm, savingNode, openAdd, openEdit, closeModal, saveNode,
-      confirmDelete, deleteNode, toggleConnect,
+      confirmDelete, deleteNode, toggleConnect, reloadNode, syncing,
       INPUT, INPUT_STYLE,
     }
   },
@@ -161,7 +178,13 @@ export default defineComponent({
               >{{ node.connected ? 'Disconnect' : 'Connect' }}</button>
 
               <button
-                v-if="node.id !== nodes.activeNodeId"
+                v-if="node.connected"
+                @click="reloadNode(node)"
+                :disabled="syncing[node.id]"
+                class="py-2 rounded-xl text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/15 transition-all disabled:opacity-40"
+              >{{ syncing[node.id] ? '…' : 'Reload' }}</button>
+              <button
+                v-else-if="node.id !== nodes.activeNodeId"
                 @click="nodes.setActive(node.id)"
                 class="py-2 rounded-xl text-xs font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/15 transition-all"
               >Set active</button>
@@ -212,7 +235,7 @@ export default defineComponent({
         <form @submit.prevent="saveNode" class="space-y-3" autocomplete="off">
           <div>
             <label class="block text-xs text-zinc-500 mb-1.5">Name</label>
-            <input v-model="nodeForm.name" type="text" required placeholder="My Node"
+            <input v-model="nodeForm.name" type="text" required placeholder="My Node" autocomplete="new-password"
               :class="INPUT" :style="INPUT_STYLE" />
           </div>
           <div>
@@ -228,7 +251,7 @@ export default defineComponent({
           <template v-if="nodeForm.connection_type === 'tcp'">
             <div>
               <label class="block text-xs text-zinc-500 mb-1.5">Host</label>
-              <input v-model="nodeForm.host" type="text" required placeholder="192.168.1.100"
+              <input v-model="nodeForm.host" type="text" required placeholder="192.168.1.100" autocomplete="new-password"
                 :class="INPUT" :style="INPUT_STYLE" />
             </div>
             <div>
@@ -240,7 +263,7 @@ export default defineComponent({
           <template v-else>
             <div>
               <label class="block text-xs text-zinc-500 mb-1.5">Device Path</label>
-              <input v-model="nodeForm.device_path" type="text" required placeholder="/dev/ttyUSB0"
+              <input v-model="nodeForm.device_path" type="text" required placeholder="/dev/ttyUSB0" autocomplete="new-password"
                 :class="INPUT" :style="INPUT_STYLE" />
             </div>
           </template>

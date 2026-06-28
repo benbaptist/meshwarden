@@ -110,6 +110,12 @@ class NodeManager:
         """Run an arbitrary meshcore coroutine for a given node."""
         return self.run_async(coro, timeout=timeout)
 
+    def sync(self, node_id: int) -> None:
+        """Re-sync contacts and info from the node."""
+        conn = self._connections.get(node_id)
+        if conn and conn.is_connected:
+            self.run_async(conn.sync())
+
     def set_pending_ping(self, node_id: int, contact_id: int, waiter: dict) -> None:
         self._pending_pings[(node_id, contact_id)] = waiter
 

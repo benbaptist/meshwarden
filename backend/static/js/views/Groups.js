@@ -146,16 +146,16 @@ export default defineComponent({
 
       <!-- Create group modal -->
       <Modal :show="showCreateForm" title="Create Group" @close="showCreateForm = false">
-        <form @submit.prevent="createGroup" class="space-y-4">
+        <form @submit.prevent="createGroup" class="space-y-4" autocomplete="off">
           <div>
             <label class="block text-xs text-zinc-500 mb-1.5">Name</label>
-            <input v-model="form.name" type="text" required
+            <input v-model="form.name" type="text" required autocomplete="new-password"
               class="w-full px-3.5 py-2.5 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none"
               style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);" />
           </div>
           <div>
             <label class="block text-xs text-zinc-500 mb-1.5">Description</label>
-            <input v-model="form.description" type="text"
+            <input v-model="form.description" type="text" autocomplete="new-password"
               class="w-full px-3.5 py-2.5 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none"
               style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);" />
           </div>

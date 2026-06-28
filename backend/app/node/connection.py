@@ -108,6 +108,10 @@ class NodeConnection:
         except Exception:
             logger.exception(f'Node {self.node_id}: initial contact sync failed')
 
+    async def sync(self) -> None:
+        """Re-run the initial sync (contacts) on demand."""
+        await self._initial_sync()
+
     async def disconnect(self) -> None:
         for sub in self._subscriptions:
             try:

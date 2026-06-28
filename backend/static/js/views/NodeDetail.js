@@ -153,7 +153,7 @@ export default defineComponent({
           <form @submit.prevent="saveRadioConfig" class="space-y-4" autocomplete="off">
             <div>
               <label class="block text-xs text-zinc-500 mb-1.5">Node Name</label>
-              <input v-model="radioForm.name" type="text"
+              <input v-model="radioForm.name" type="text" autocomplete="new-password"
                 class="w-full px-3.5 py-2.5 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 outline-none"
                 style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);" />
             </div>

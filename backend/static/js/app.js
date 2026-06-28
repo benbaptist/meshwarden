@@ -31,6 +31,11 @@ app.component('ChatPanel', ChatPanel)
 
 app.mount('#app')
 
+// Log version
+fetch('/api/version').then(r => r.json()).then(({ version }) => {
+  console.log(`%cMeshWarden ${version}`, 'color: #7c3aed; font-weight: bold; font-size: 14px;')
+})
+
 // Register service worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(console.error)
