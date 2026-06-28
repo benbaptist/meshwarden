@@ -42,6 +42,10 @@ router.beforeEach(async (to) => {
     return '/offline'
   }
 
+  if (!auth.serverReachable) {
+    return true
+  }
+
   if (auth.serverReachable && to.path === '/offline') {
     return '/'
   }
