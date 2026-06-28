@@ -10,10 +10,12 @@ const ContactDetail = () => import('./views/ContactDetail.js')
 const Channels      = () => import('./views/Channels.js')
 const ChannelDetail = () => import('./views/ChannelDetail.js')
 const Settings      = () => import('./views/Settings.js')
+const Offline       = () => import('./views/Offline.js')
 
 const routes = [
   { path: '/setup',              component: SetupWizard,   meta: { public: true } },
   { path: '/login',              component: Login,          meta: { public: true } },
+  { path: '/offline',            component: Offline,        meta: { public: true } },
   { path: '/',                   component: MapView,        meta: { auth: true } },
   { path: '/contacts',           component: Contacts,       meta: { auth: true } },
   { path: '/contacts/:id',       component: ContactDetail,  meta: { auth: true } },
@@ -34,6 +36,14 @@ router.beforeEach(async (to) => {
   // Check setup status on first load
   if (!auth.setupChecked) {
     await auth.checkSetup()
+  }
+
+  if (!auth.serverReachable && to.path !== '/offline') {
+    return '/offline'
+  }
+
+  if (auth.serverReachable && to.path === '/offline') {
+    return '/'
   }
 
   if (!auth.setupComplete && to.path !== '/setup') {

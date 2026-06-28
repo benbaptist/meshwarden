@@ -8,6 +8,7 @@ export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref(localStorage.getItem('mw_access_token'))
   const setupComplete = ref(false)
   const setupChecked = ref(false)
+  const serverReachable = ref(true)
 
   const isAuthenticated = computed(() => !!accessToken.value)
 
@@ -23,8 +24,10 @@ export const useAuthStore = defineStore('auth', () => {
   async function checkSetup() {
     try {
       const data = await api.json('/api/auth/status')
+      serverReachable.value = true
       setupComplete.value = data.setup_complete
     } catch {
+      serverReachable.value = false
       setupComplete.value = false
     } finally {
       setupChecked.value = true
@@ -108,7 +111,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    user, accessToken, setupComplete, setupChecked, isAuthenticated,
+    user, accessToken, setupComplete, setupChecked, isAuthenticated, serverReachable,
     setAccessToken, checkSetup, setup, login, refresh, logout, restoreSession, changePassword,
   }
 })
