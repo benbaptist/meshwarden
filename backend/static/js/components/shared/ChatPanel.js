@@ -101,7 +101,7 @@ export default defineComponent({
               </template>
               <!-- Inbound channel message: show hop count if available -->
               <template v-if="msg.direction === 'in' && msg.msg_type === 'channel' && msg.hop_count != null">
-                <span class="text-[10px] opacity-40" :title="\`Repeated ${msg.hop_count} time${msg.hop_count !== 1 ? 's' : ''}\`">×{{ msg.hop_count }}</span>
+                <span class="text-[10px] opacity-40" :title="'Repeated ' + msg.hop_count + (msg.hop_count !== 1 ? ' times' : ' time')">×{{ msg.hop_count }}</span>
               </template>
             </div>
           </div>
