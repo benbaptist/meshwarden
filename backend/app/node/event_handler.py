@@ -264,7 +264,9 @@ class EventHandler:
         record.set_lpp(p.get('lpp', {}))
         db.session.add(record)
         db.session.commit()
-        logger.info(f'Node {self.node_id}: telemetry from {contact.adv_name if contact else "unknown"} — {list(p.get("lpp", {}).keys())}')
+        lpp = p.get('lpp', {})
+        channels = list(lpp.keys()) if isinstance(lpp, dict) else len(lpp)
+        logger.info(f'Node {self.node_id}: telemetry from {contact.adv_name if contact else "unknown"} — {channels}')
         socketio.emit('telemetry:received', {
             'node_id': self.node_id,
             'contact_id': contact.id if contact else None,

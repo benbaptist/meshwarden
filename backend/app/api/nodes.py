@@ -169,8 +169,9 @@ def get_contact_uri(node_id: int):
     conn = node_manager.get_connection(node_id)
     try:
         result = node_manager.run_async(conn.mc.commands.export_contact(), timeout=10)
-        # result is an Event object; payload contains the URI string
-        uri = result.payload if hasattr(result, 'payload') else str(result)
+        # result is an Event object; payload is the URI string, or a dict wrapping it
+        payload = result.payload if hasattr(result, 'payload') else result
+        uri = payload.get('uri') if isinstance(payload, dict) else str(payload)
         return jsonify({'uri': uri})
     except Exception:
         logger.exception('export_contact failed for node %d', node_id)
