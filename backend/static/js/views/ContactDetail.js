@@ -878,7 +878,7 @@ export default defineComponent({
                     @click="ping"
                     :disabled="pinging"
                     class="h-8 px-2.5 flex items-center gap-1.5 rounded-lg transition-colors text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40 text-xs font-medium"
-                    :title="\`Ping (${pingSize}-byte payload)\`"
+                    :title="'Ping (' + pingSize + '-byte payload)'"
                   >
                     <Icon name="signal" :size="14" />{{ pinging ? '\u2026' : 'Ping' }}
                   </button>
