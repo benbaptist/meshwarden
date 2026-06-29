@@ -7,6 +7,11 @@ logging.basicConfig(
     format='%(asctime)s [%(name)-22s] %(levelname)-8s %(message)s',
     datefmt='%H:%M:%S',
 )
+# meshcore (and some deps) attach their own handler to the root logger on import,
+# causing every line to print twice. Import it now, then keep only our handler.
+import meshcore  # noqa: F401
+_root = logging.getLogger()
+_our_handler = _root.handlers[0]
 # Suppress noisy HTTP access logs (werkzeug, engineio, socketio)
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 logging.getLogger('meshcore').setLevel(logging.ERROR)
@@ -15,6 +20,8 @@ logging.getLogger('socketio.server').setLevel(logging.WARNING)
 
 from app import create_app
 from app.extensions import socketio
+
+_root.handlers = [_our_handler]
 
 app = create_app(os.environ.get('FLASK_ENV', 'development'))
 
