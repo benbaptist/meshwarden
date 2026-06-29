@@ -81,16 +81,24 @@ export default defineComponent({
             <div>{{ msg.direction === 'in' && msg.msg_type === 'channel' ? parseChanMsg(msg.text).body : msg.text }}</div>
             <div class="flex items-center gap-1.5 mt-1" :class="msg.direction === 'out' ? 'justify-end' : 'justify-start'">
               <span class="text-[10px] opacity-60">{{ fmtTimestamp(msg.timestamp) }}</span>
-              <template v-if="msg.direction === 'out'">
-                <span
-                  :title="msg.status === 'acked' ? 'Received by destination' : msg.status === 'sent' ? 'Seen by mesh' : msg.status === 'failed' ? 'Failed to send' : 'Sending…'"
-                  class="inline-flex items-center"
-                >
+              <!-- Outbound direct message: show delivery status -->
+              <template v-if="msg.direction === 'out' && msg.msg_type !== 'channel'">
+                <span class="inline-flex items-center" :title="msg.status === 'acked' ? 'Acknowledged by recipient' : msg.status === 'sent' ? 'Delivered to mesh' : msg.status === 'failed' ? 'Send failed' : 'Queued for transmission'">
                   <Icon v-if="msg.status === 'failed'" name="x-circle" :size="11" class="text-rose-400" />
-                  <Icon v-else-if="msg.status === 'acked'" name="check-circle" :size="11" class="opacity-70" />
-                  <Icon v-else-if="msg.status === 'sent'" name="check" :size="11" class="opacity-50" />
+                  <template v-else-if="msg.status === 'acked'">
+                    <!-- Double-check: acked by recipient -->
+                    <svg width="18" height="11" viewBox="0 0 18 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-violet-400" aria-hidden="true">
+                      <polyline points="1,6 5,10 11,2" />
+                      <polyline points="7,6 11,10 17,2" />
+                    </svg>
+                  </template>
+                  <Icon v-else-if="msg.status === 'sent'" name="check" :size="11" class="opacity-50" title="Delivered to mesh" />
                   <Icon v-else name="clock" :size="11" class="opacity-40" />
                 </span>
+              </template>
+              <!-- Inbound channel message: show hop count if available -->
+              <template v-if="msg.direction === 'in' && msg.msg_type === 'channel' && msg.hop_count != null">
+                <span class="text-[10px] opacity-40" :title="\`Repeated ${msg.hop_count} time${msg.hop_count !== 1 ? 's' : ''}\`">×{{ msg.hop_count }}</span>
               </template>
             </div>
           </div>

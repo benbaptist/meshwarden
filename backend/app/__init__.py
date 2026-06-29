@@ -59,6 +59,16 @@ def _apply_migrations(db) -> None:
                 conn.execute(db.text(f'ALTER TABLE contacts ADD COLUMN {col_name} {col_def}'))
         conn.commit()
 
+        # messages table migrations
+        result = conn.execute(db.text('PRAGMA table_info(messages)'))
+        existing_msgs = {row[1] for row in result}
+        for col_name, col_def in [
+            ('hop_count', 'INTEGER'),
+        ]:
+            if col_name not in existing_msgs:
+                conn.execute(db.text(f'ALTER TABLE messages ADD COLUMN {col_name} {col_def}'))
+        conn.commit()
+
 
 def create_app(config_name: str | None = None) -> Flask:
     if config_name is None:

@@ -120,6 +120,7 @@ class EventHandler:
             sender_timestamp=p.get('sender_timestamp'),
             snr=p.get('SNR'),
             rssi=p.get('RSSI'),
+            hop_count=p.get('hop_count') or p.get('hops') or p.get('repeat_count'),
             status='received',
         )
         db.session.add(msg)

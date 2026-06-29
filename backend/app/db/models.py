@@ -224,6 +224,7 @@ class Message(db.Model):
     status: Mapped[str] = mapped_column(String(16), default='received')
     # 'received' | 'sending' | 'sent' | 'acked' | 'failed'
     expected_ack: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    hop_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     node: Mapped[Node] = relationship('Node', back_populates='messages')
     contact: Mapped[Contact | None] = relationship('Contact', back_populates='messages')
@@ -243,6 +244,7 @@ class Message(db.Model):
             'snr': self.snr,
             'rssi': self.rssi,
             'status': self.status,
+            'hop_count': self.hop_count,
         }
 
 
