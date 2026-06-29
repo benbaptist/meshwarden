@@ -33,6 +33,7 @@ class NodeManager:
             name='meshwarden-asyncio',
         )
         self._thread.start()
+        logger.info('NodeManager: asyncio event loop started')
         # Connect all enabled nodes from DB
         self.run_async(self._reconnect_enabled())
 
@@ -91,9 +92,11 @@ class NodeManager:
     # ------------------------------------------------------------------
 
     def connect(self, node_id: int) -> None:
+        logger.info(f'NodeManager: connecting node {node_id}')
         self.run_async(self._connect(node_id))
 
     def disconnect(self, node_id: int) -> None:
+        logger.info(f'NodeManager: disconnecting node {node_id}')
         self.run_async(self._disconnect(node_id))
 
     def is_connected(self, node_id: int) -> bool:

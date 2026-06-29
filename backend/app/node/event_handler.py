@@ -81,6 +81,9 @@ class EventHandler:
         if contact:
             contact.last_heard = datetime.now(timezone.utc)
 
+        sender = contact.adv_name if contact else f'unknown ({pubkey_prefix[:8]}…)'
+        logger.info(f'Node {self.node_id}: direct msg from {sender}: {p.get("text", "")[:60]!r}')
+
         msg = Message(
             node_id=self.node_id,
             direction='in',
@@ -104,6 +107,8 @@ class EventHandler:
         from ..db.models import Message
 
         p = event.payload
+        ch_idx = p.get('channel_idx', '?')
+        logger.info(f'Node {self.node_id}: channel[{ch_idx}] msg: {p.get("text", "")[:60]!r}')
         msg = Message(
             node_id=self.node_id,
             direction='in',
@@ -141,6 +146,7 @@ class EventHandler:
         if msg:
             msg.status = 'sent'
             db.session.commit()
+            logger.debug(f'Node {self.node_id}: msg id={msg.id} seen by mesh (ack={ack_hex[:8]})')
             socketio.emit('message:ack', {
                 'node_id': self.node_id,
                 'message_id': msg.id,
@@ -161,6 +167,7 @@ class EventHandler:
         if msg:
             msg.status = 'acked'
             db.session.commit()
+            logger.info(f'Node {self.node_id}: msg id={msg.id} acknowledged by recipient')
             socketio.emit('message:ack', {
                 'node_id': self.node_id,
                 'message_id': msg.id,
@@ -201,6 +208,7 @@ class EventHandler:
         )
         db.session.add(contact)
         db.session.commit()
+        logger.info(f'Node {self.node_id}: new contact discovered — {contact.adv_name!r} ({public_key[:8]}…)')
         socketio.emit('contact:new', {
             'node_id': self.node_id,
             'contact': contact.to_dict(),
@@ -254,7 +262,7 @@ class EventHandler:
         record.set_lpp(p.get('lpp', {}))
         db.session.add(record)
         db.session.commit()
-
+        logger.info(f'Node {self.node_id}: telemetry from {contact.adv_name if contact else "unknown"} — {list(p.get("lpp", {}).keys())}')
         socketio.emit('telemetry:received', {
             'node_id': self.node_id,
             'contact_id': contact.id if contact else None,
@@ -284,6 +292,9 @@ class EventHandler:
                 latency_ms = round((time.monotonic() - waiter['sent_at']) * 1000)
                 waiter['result']['latency_ms'] = latency_ms
                 waiter['event'].set()
+                logger.info(f'Node {self.node_id}: STATUS_RESPONSE from contact_id={contact_id}, latency={latency_ms}ms')
+            else:
+                logger.debug(f'Node {self.node_id}: STATUS_RESPONSE from contact_id={contact_id} (no pending ping)')
         socketio.emit('node:status', {
             'node_id': self.node_id,
             'contact_id': contact_id,
@@ -385,17 +396,21 @@ class EventHandler:
             node.last_seen = datetime.now(timezone.utc)
             db.session.commit()
 
+        reconnected = event.payload.get('reconnected', False)
+        logger.info(f'Node {self.node_id}: {"re" if reconnected else ""}connected to mesh')
         socketio.emit('node:connection', {
             'node_id': self.node_id,
             'connected': True,
-            'reconnected': event.payload.get('reconnected', False),
+            'reconnected': reconnected,
         })
 
     def _on_disconnected(self, event, db, socketio) -> None:
+        reason = event.payload.get('reason', 'unknown')
+        logger.warning(f'Node {self.node_id}: disconnected — reason: {reason}')
         socketio.emit('node:connection', {
             'node_id': self.node_id,
             'connected': False,
-            'reason': event.payload.get('reason'),
+            'reason': reason,
         })
 
     def _on_self_info(self, event, db, socketio) -> None:

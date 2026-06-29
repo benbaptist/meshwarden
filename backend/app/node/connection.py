@@ -28,6 +28,8 @@ class NodeConnection:
     async def connect(self) -> None:
         try:
             from meshcore import MeshCore
+            logger.info(f'Node {self.node_id}: connecting via {self._node.connection_type} '
+                        f'({self._node.host}:{self._node.port} if tcp else {self._node.device_path})')
             if self._node.connection_type == 'tcp':
                 self._mc = await MeshCore.create_tcp(
                     self._node.host,
@@ -48,7 +50,7 @@ class NodeConnection:
             self._subscribe()
             await self._initial_sync()
             await self._mc.commands.set_time(int(time.time()))
-            logger.info(f'Node {self.node_id}: connected and clock synced')
+            logger.info(f'Node {self.node_id}: connected, clock synced, subscriptions active')
 
         except Exception:
             logger.exception(f'Node {self.node_id}: connection failed')
@@ -104,15 +106,18 @@ class NodeConnection:
                         db.session.add(contact)
 
                 db.session.commit()
+                logger.info(f'Node {self.node_id}: contact sync complete — {len(contacts)} contacts')
 
         except Exception:
             logger.exception(f'Node {self.node_id}: initial contact sync failed')
 
     async def sync(self) -> None:
         """Re-run the initial sync (contacts) on demand."""
+        logger.info(f'Node {self.node_id}: manual sync triggered')
         await self._initial_sync()
 
     async def disconnect(self) -> None:
+        logger.info(f'Node {self.node_id}: disconnecting')
         for sub in self._subscriptions:
             try:
                 sub.unsubscribe()
