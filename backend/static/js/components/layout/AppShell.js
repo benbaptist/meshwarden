@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/auth.js'
 import { useNodesStore } from '../../stores/nodes.js'
 import { useContactsStore } from '../../stores/contacts.js'
 import { useMessagesStore } from '../../stores/messages.js'
+import { getSocket } from '../../socket.js'
 import Sidebar from './Sidebar.js'
 import BottomNav from './BottomNav.js'
 import NodeSwitcher from './NodeSwitcher.js'
@@ -35,6 +36,24 @@ export default defineComponent({
     onMounted(() => { if (auth.user) initStores() })
     watch(() => auth.user, (val) => { if (val) initStores() })
 
+    // Re-fetch on socket reconnect so stale data is refreshed after JWT rotation
+    const _onSocketConnect = () => {
+      if (storesInitialized) {
+        nodes.fetchAll()
+        contacts.fetchAll()
+      }
+    }
+
+    onMounted(() => {
+      // Socket may not exist yet if user isn't logged in; defer attachment
+      const attachReconnect = () => {
+        const s = getSocket()
+        if (s) s.on('connect', _onSocketConnect)
+      }
+      if (auth.user) attachReconnect()
+      watch(() => auth.user, (val) => { if (val) attachReconnect() }, { once: true })
+    })
+
     const showLoading = ref(false)
     const navError = ref(null)
     let loadingTimer = null
@@ -64,6 +83,8 @@ export default defineComponent({
     }
 
     onUnmounted(() => {
+      const s = getSocket()
+      if (s) s.off('connect', _onSocketConnect)
       removeBeforeEach()
       removeAfterEach()
       removeOnError()
