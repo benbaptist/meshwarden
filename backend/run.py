@@ -9,6 +9,7 @@ logging.basicConfig(
 )
 # Suppress noisy HTTP access logs (werkzeug, engineio, socketio)
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
+logging.getLogger('meshcore').setLevel(logging.ERROR)
 logging.getLogger('engineio.server').setLevel(logging.WARNING)
 logging.getLogger('socketio.server').setLevel(logging.WARNING)
 

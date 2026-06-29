@@ -12,7 +12,7 @@ class Config:
     JWT_REFRESH_EXPIRES = timedelta(days=30)
     ALLOWED_ORIGINS = [
         o.strip()
-        for o in os.environ.get('ALLOWED_ORIGINS', 'http://localhost:5000').split(',')
+        for o in os.environ.get('ALLOWED_ORIGINS', 'http://localhost:5001,http://localhost:5000').split(',')
     ]
     RATELIMIT_STORAGE_URI = 'memory://'
 

@@ -206,6 +206,7 @@ class EventHandler:
             lat=p.get('adv_lat'),
             lon=p.get('adv_lon'),
             out_path=p.get('out_path'),
+            tags='',
         )
         db.session.add(contact)
         db.session.commit()

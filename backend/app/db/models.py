@@ -141,6 +141,7 @@ class Contact(db.Model):
     out_path: Mapped[str | None] = mapped_column(String(256), nullable=True)
     last_heard: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     favorite: Mapped[bool] = mapped_column(Boolean, default=False, server_default='0')
+    tags: Mapped[str] = mapped_column(Text, default='', server_default='')
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
