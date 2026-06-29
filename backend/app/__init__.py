@@ -122,6 +122,13 @@ def create_app(config_name: str | None = None) -> Flask:
     def manifest():
         return send_from_directory(app.static_folder, 'manifest.json')
 
+    # Add no-cache headers to all JS files so browsers always revalidate
+    @app.after_request
+    def add_cache_headers(response):
+        if response.content_type and 'javascript' in response.content_type:
+            response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        return response
+
     # Compute a version string from static file mtimes so it changes on every deploy.
     def _static_version(static_dir: str) -> str:
         h = hashlib.md5()
@@ -144,6 +151,8 @@ def create_app(config_name: str | None = None) -> Flask:
         return resp
 
     # SPA catch-all: any non-API, non-static path returns index.html
+    # Inject cache-busting version into the app.js module entrypoint so browsers
+    # always fetch the latest JS after a deploy.
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def spa(path):
@@ -152,6 +161,16 @@ def create_app(config_name: str | None = None) -> Flask:
         static_file = os.path.join(app.static_folder, path)
         if path and os.path.isfile(static_file):
             return send_from_directory(app.static_folder, path)
-        return send_from_directory(app.static_folder, 'index.html')
+        with open(os.path.join(app.static_folder, 'index.html')) as f:
+            html = f.read()
+        # Append version query string to the module entrypoint so the browser
+        # re-fetches app.js (and its dynamic imports chain) on every deploy.
+        html = html.replace(
+            'src="/static/js/app.js"',
+            f'src="/static/js/app.js?v={_cache_version}"',
+        )
+        resp = Response(html, mimetype='text/html')
+        resp.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        return resp
 
     return app
