@@ -2,6 +2,7 @@ import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNodesStore } from '../stores/nodes.js'
 import { useMessagesStore } from '../stores/messages.js'
+import { useContactsStore } from '../stores/contacts.js'
 import { useToast } from '../components/shared/Toast.js'
 import api from '../api.js'
 
@@ -12,6 +13,7 @@ export default defineComponent({
     const router = useRouter()
     const nodes = useNodesStore()
     const messages = useMessagesStore()
+    const contacts = useContactsStore()
     const toast = useToast()
 
     const channelIdx = Number(route.params.idx)
@@ -61,7 +63,14 @@ export default defineComponent({
 
     onMounted(load)
 
-    return { channelIdx, channelName, thread, sending, sendMsg, router }
+    function onSenderClick(advName) {
+      const contact = Object.values(contacts.contacts).find(
+        (c) => c.adv_name === advName || c.custom_name === advName
+      )
+      if (contact) router.push(`/contacts/${contact.id}`)
+    }
+
+    return { channelIdx, channelName, thread, sending, sendMsg, onSenderClick, router }
   },
   template: `
     <div class="h-full flex flex-col">
@@ -89,7 +98,7 @@ export default defineComponent({
       </div>
 
       <!-- Chat -->
-      <ChatPanel :thread="thread" :sending="sending" :focused="true" @send="sendMsg" />
+      <ChatPanel :thread="thread" :sending="sending" :focused="true" @send="sendMsg" @sender-click="onSenderClick" />
     </div>
   `,
 })

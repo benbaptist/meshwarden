@@ -8,7 +8,7 @@ export default defineComponent({
     // When focused changes to true (e.g. tab switch), scroll to bottom
     focused:  { type: Boolean, default: true },
   },
-  emits: ['send'],
+  emits: ['send', 'sender-click'],
   setup(props, { emit }) {
     const text = ref('')
     const threadRef = ref(null)
@@ -76,8 +76,11 @@ export default defineComponent({
             :class="['max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed', msg.direction === 'out' ? 'rounded-br-md' : 'rounded-bl-md glass']"
             :style="msg.direction === 'out' ? 'background: linear-gradient(135deg, #7c3aed, #9333ea); color: white;' : 'color: #e4e4e7;'"
           >
-            <div v-if="msg.direction === 'in' && msg.msg_type === 'channel' && parseChanMsg(msg.text).sender"
-                 class="text-[11px] font-medium text-violet-300/70 mb-0.5">{{ parseChanMsg(msg.text).sender }}</div>
+            <button
+              v-if="msg.direction === 'in' && msg.msg_type === 'channel' && parseChanMsg(msg.text).sender"
+              @click="$emit('sender-click', parseChanMsg(msg.text).sender)"
+              class="text-[11px] font-medium text-violet-300/70 mb-0.5 hover:text-violet-200 hover:underline cursor-pointer block transition-colors"
+            >{{ parseChanMsg(msg.text).sender }}</button>
             <div>{{ msg.direction === 'in' && msg.msg_type === 'channel' ? parseChanMsg(msg.text).body : msg.text }}</div>
             <div class="flex items-center gap-1.5 mt-1" :class="msg.direction === 'out' ? 'justify-end' : 'justify-start'">
               <span class="text-[10px] opacity-60">{{ fmtTimestamp(msg.timestamp) }}</span>
