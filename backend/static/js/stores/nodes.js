@@ -70,6 +70,14 @@ export const useNodesStore = defineStore('nodes', () => {
     await api.json(`/api/nodes/${id}/sync`, { method: 'POST' })
   }
 
+  async function advertise(id, flood = false) {
+    return api.json(`/api/nodes/${id}/advertise`, { method: 'POST', body: JSON.stringify({ flood }) })
+  }
+
+  async function getContactUri(id) {
+    return api.json(`/api/nodes/${id}/contact_uri`)
+  }
+
   async function fetchStats(id) {
     return api.json(`/api/nodes/${id}/stats`)
   }
@@ -104,6 +112,6 @@ export const useNodesStore = defineStore('nodes', () => {
   return {
     nodes, loading, activeNodeId, activeNode,
     setActive, fetchAll, fetchOne, create, update, remove,
-    connect, disconnect, sync, fetchStats, pushConfig, bindSocket,
+    connect, disconnect, sync, advertise, getContactUri, fetchStats, pushConfig, bindSocket,
   }
 })

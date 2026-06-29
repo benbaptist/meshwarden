@@ -1,9 +1,10 @@
-import { defineComponent, ref, computed, onMounted } from 'vue'
+import { defineComponent, ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useContactsStore } from '../stores/contacts.js'
 import { useNodesStore } from '../stores/nodes.js'
 import { useMessagesStore } from '../stores/messages.js'
 import { useGroupsStore } from '../stores/groups.js'
+import { useToast } from '../components/shared/Toast.js'
 
 const TYPE_META = {
   CLI:  { label: 'Client',   bg: 'bg-violet-500/15 border-violet-500/20 text-violet-300' },
@@ -36,10 +37,58 @@ export default defineComponent({
     const nodes = useNodesStore()
     const messages = useMessagesStore()
     const groups = useGroupsStore()
+    const toast = useToast()
 
     const search = ref('')
     const pingingId = ref(null)
     const pingResults = ref({})
+
+    // Advert state
+    const adverting = ref(false)
+
+    // My Info modal
+    const showMyInfo = ref(false)
+    const myInfoUri = ref(null)
+    const myInfoLoading = ref(false)
+
+    async function sendAdvert(flood = false) {
+      if (adverting.value || !nodes.activeNodeId) return
+      adverting.value = true
+      try {
+        await nodes.advertise(nodes.activeNodeId, flood)
+        toast.success(flood ? 'Flood advert sent' : 'Zero-hop advert sent')
+      } catch (e) {
+        toast.error(e.message || 'Advert failed')
+      } finally {
+        adverting.value = false
+      }
+    }
+
+    async function openMyInfo() {
+      showMyInfo.value = true
+      myInfoUri.value = null
+      myInfoLoading.value = true
+      try {
+        const data = await nodes.getContactUri(nodes.activeNodeId)
+        myInfoUri.value = data.uri
+        nextTick(() => renderQr(data.uri))
+      } catch (e) {
+        toast.error(e.message || 'Failed to get contact URI')
+        myInfoLoading.value = false
+      } finally {
+        myInfoLoading.value = false
+      }
+    }
+
+    function renderQr(uri) {
+      const canvas = document.getElementById('my-info-qr')
+      if (!canvas || !uri || typeof QRCode === 'undefined') return
+      QRCode.toCanvas(canvas, uri, {
+        width: 220,
+        margin: 2,
+        color: { dark: '#e4e4e7', light: '#09090f' },
+      })
+    }
 
     onMounted(async () => {
       if (!contacts.contacts.length) {
@@ -127,6 +176,7 @@ export default defineComponent({
       contacts, nodes, groups, search, pingingId, pingResults,
       filtered, nodeFiltered, selectGroup, toggleFavorite, doPing, openAdmin,
       unread, avatarStyle, fmtTime, open,
+      adverting, sendAdvert, showMyInfo, myInfoUri, myInfoLoading, openMyInfo,
       TYPE_META,
     }
   },
@@ -141,12 +191,46 @@ export default defineComponent({
           <input
             v-model="search"
             type="text"
+            autocomplete="new-password"
             placeholder="Search…"
             class="w-full pl-7 pr-2.5 py-1.5 rounded-lg text-xs text-zinc-100 placeholder-zinc-600 outline-none transition-all"
             style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
           />
         </div>
+        <!-- Advert + My Info buttons -->
+        <div v-if="nodes.activeNodeId" class="flex items-center gap-1 flex-shrink-0">
+          <button
+            @click="sendAdvert(false)"
+            :disabled="adverting"
+            title="Send zero-hop advertisement (direct neighbors only)"
+            class="h-8 w-8 flex items-center justify-center rounded-lg transition-colors text-zinc-500 hover:text-violet-300 hover:bg-violet-500/10 disabled:opacity-40"
+          ><Icon name="megaphone" :size="15" /></button>
+          <button
+            @click="sendAdvert(true)"
+            :disabled="adverting"
+            title="Send flood advertisement (entire network)"
+            class="h-8 w-8 flex items-center justify-center rounded-lg transition-colors text-zinc-500 hover:text-amber-300 hover:bg-amber-500/10 disabled:opacity-40"
+          ><Icon name="signal" :size="15" /></button>
+          <button
+            @click="openMyInfo"
+            title="My contact info + QR code"
+            class="h-8 w-8 flex items-center justify-center rounded-lg transition-colors text-zinc-500 hover:text-cyan-300 hover:bg-cyan-500/10"
+          ><Icon name="qr-code" :size="15" /></button>
+        </div>
       </div>
+
+      <!-- My Info Modal -->
+      <Modal :show="showMyInfo" @close="showMyInfo = false">
+        <div class="p-6 w-full max-w-xs text-center">
+          <div class="text-sm font-bold text-white mb-1">My Contact Info</div>
+          <div class="text-xs text-zinc-500 mb-4">Others can scan this QR code to add you as a contact</div>
+          <div class="flex items-center justify-center mb-4">
+            <Spinner v-if="myInfoLoading" />
+            <canvas v-else id="my-info-qr" class="rounded-xl" style="image-rendering: pixelated;" />
+          </div>
+          <div v-if="myInfoUri" class="text-[10px] text-zinc-600 font-mono break-all px-2">{{ myInfoUri }}</div>
+        </div>
+      </Modal>
 
       <!-- Group filter chips -->
       <div v-if="groups.groups.length" class="flex-shrink-0 flex gap-2 px-4 py-2 overflow-x-auto scrollbar-none border-b border-white/[0.04]">

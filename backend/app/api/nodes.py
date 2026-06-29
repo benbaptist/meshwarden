@@ -136,6 +136,47 @@ def sync_node(node_id: int):
     return jsonify({'ok': True})
 
 
+@nodes_bp.post('/<int:node_id>/advertise')
+@require_auth
+def advertise_node(node_id: int):
+    node = db.session.get(Node, node_id)
+    if not node:
+        return jsonify({'error': 'Node not found'}), 404
+    if not node_manager.is_connected(node_id):
+        return jsonify({'error': 'Node not connected'}), 409
+
+    data = request.get_json(silent=True) or {}
+    flood = bool(data.get('flood', False))
+    conn = node_manager.get_connection(node_id)
+    try:
+        node_manager.run_async(conn.mc.commands.send_advert(flood=flood), timeout=10)
+        logger.info('Node %d: advertised (flood=%s)', node_id, flood)
+        return jsonify({'ok': True})
+    except Exception:
+        logger.exception('advertise failed for node %d', node_id)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@nodes_bp.get('/<int:node_id>/contact_uri')
+@require_auth
+def get_contact_uri(node_id: int):
+    node = db.session.get(Node, node_id)
+    if not node:
+        return jsonify({'error': 'Node not found'}), 404
+    if not node_manager.is_connected(node_id):
+        return jsonify({'error': 'Node not connected'}), 409
+
+    conn = node_manager.get_connection(node_id)
+    try:
+        result = node_manager.run_async(conn.mc.commands.export_contact(), timeout=10)
+        # result is an Event object; payload contains the URI string
+        uri = result.payload if hasattr(result, 'payload') else str(result)
+        return jsonify({'uri': uri})
+    except Exception:
+        logger.exception('export_contact failed for node %d', node_id)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 @nodes_bp.get('/<int:node_id>/stats')
 @require_auth
 def get_stats(node_id: int):
