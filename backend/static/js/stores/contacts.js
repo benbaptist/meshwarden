@@ -69,8 +69,11 @@ export const useContactsStore = defineStore('contacts', () => {
     return updated
   }
 
-  async function ping(id) {
-    return api.json(`/api/contacts/${id}/ping`, { method: 'POST' })
+  async function ping(id, payloadSize = 1) {
+    return api.json(`/api/contacts/${id}/ping`, {
+      method: 'POST',
+      body: JSON.stringify({ payload_size: payloadSize }),
+    })
   }
 
   async function resetPath(id) {

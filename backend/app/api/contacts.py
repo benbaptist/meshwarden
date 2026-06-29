@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 
 from flask import Blueprint, jsonify, request
@@ -211,20 +212,40 @@ def ping_contact(contact_id: int):
     if not conn or not conn.is_connected:
         return jsonify({'error': 'Node not connected'}), 503
 
-    _PING_TIMEOUT = 30  # seconds to wait for a mesh response
+    PING_TIMEOUT = 3.0  # seconds — mesh round-trip timeout
 
-    sent_at = time.monotonic()
-    success = False
-    latency_ms = None
+    data = request.get_json(silent=True) or {}
+    # payload_size: 1 (default), 2, or 3 bytes — used when the meshcore library
+    # exposes a size parameter; currently req_status uses a fixed payload.
+    payload_size = max(1, min(3, int(data.get('payload_size', 1))))
+
+    contact_dict = _build_contact_dict(contact)
+
+    # Register waiter BEFORE sending so we don't race the STATUS_RESPONSE event
+    event = threading.Event()
+    result = {'latency_ms': None}
+    waiter = {'sent_at': time.monotonic(), 'event': event, 'result': result}
+    node_manager.set_pending_ping(contact.node_id, contact_id, waiter)
+
     try:
+        # req_status is the binary-protocol status request.  timeout=0 means
+        # the library returns immediately (fire-and-forget); the actual
+        # STATUS_RESPONSE arrives asynchronously via the event handler.
         node_manager.run_async(
-            conn.mc.commands.req_status_sync(_build_contact_dict(contact), timeout=_PING_TIMEOUT),
-            timeout=_PING_TIMEOUT + 5,
+            conn.mc.commands.req_status(contact_dict, timeout=0),
+            timeout=2,
         )
-        latency_ms = round((time.monotonic() - sent_at) * 1000)
-        success = True
+        logger.info('Ping sent to contact %d (payload_size=%d)', contact_id, payload_size)
     except Exception:
-        logger.exception('ping failed for contact %d', contact_id)
+        # run_async may time out on the Python side while the LoRa packet is
+        # still in-flight — that is fine; we still wait for the event.
+        logger.debug('Ping send returned early for contact %d (packet may still be in-flight)', contact_id)
+
+    success = event.wait(timeout=PING_TIMEOUT)
+    node_manager.clear_pending_ping(contact.node_id, contact_id)
+
+    latency_ms = result['latency_ms'] if success else None
+    logger.info('Ping contact %d: success=%s latency=%s ms', contact_id, success, latency_ms)
 
     record = PingRecord(
         node_id=contact.node_id,

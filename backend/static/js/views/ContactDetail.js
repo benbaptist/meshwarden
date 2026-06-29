@@ -135,6 +135,7 @@ export default defineComponent({
     const groupSearchOpen = ref(false)
     const pinging = ref(false)
     const pingResult = ref(null)
+    const pingSize = ref(1)  // 1, 2, or 3 bytes
     const pings = ref([])
     const newPath = ref('')
     const settingPath = ref(false)
@@ -322,7 +323,7 @@ export default defineComponent({
       pinging.value = true
       pingResult.value = null
       try {
-        const res = await contacts.ping(contactId)
+        const res = await contacts.ping(contactId, pingSize.value)
         pingResult.value = { success: res.success, latency_ms: res.latency_ms }
         pings.value = [res, ...pings.value].slice(0, 50)
       } catch {
@@ -531,7 +532,7 @@ export default defineComponent({
     return {
       contact, history, signal, telemetry, pings, thread,
       activeTab, sending, contactGroups, groupSearch, groupSearchOpen, availableGroups, filteredAvailableGroups,
-      pinging, pingResult, newPath, settingPath,
+      pinging, pingResult, pingSize, newPath, settingPath,
       isRepeater, isSensor, hasTelemetry, pathHops,
       currentPage, telemetryModal, telemetryPassword, requestingTelemetry,
       adminPassword, adminLoggingIn, loggedIn,
@@ -872,13 +873,26 @@ export default defineComponent({
               <div class="text-[10px] text-zinc-700 font-mono mt-1 break-all">{{ contact.public_key }}</div>
 
               <div class="flex items-center gap-1.5 mt-3 flex-wrap">
-                <button
-                  @click="ping"
-                  :disabled="pinging"
-                  class="h-8 px-2.5 flex items-center gap-1.5 rounded-lg transition-colors text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40 text-xs font-medium"
-                >
-                  <Icon name="signal" :size="14" />{{ pinging ? '\u2026' : 'Ping' }}
-                </button>
+                <div class="flex items-center gap-1">
+                  <button
+                    @click="ping"
+                    :disabled="pinging"
+                    class="h-8 px-2.5 flex items-center gap-1.5 rounded-lg transition-colors text-cyan-500 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40 text-xs font-medium"
+                    :title="\`Ping (${pingSize}-byte payload)\`"
+                  >
+                    <Icon name="signal" :size="14" />{{ pinging ? '\u2026' : 'Ping' }}
+                  </button>
+                  <select
+                    v-model.number="pingSize"
+                    class="h-8 px-1.5 rounded-lg text-[10px] text-zinc-400 outline-none cursor-pointer"
+                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);"
+                    title="Ping payload size"
+                  >
+                    <option :value="1">1B</option>
+                    <option :value="2">2B</option>
+                    <option :value="3">3B</option>
+                  </select>
+                </div>
                 <span
                   v-if="pingResult !== null"
                   :class="['text-xs font-mono tabular-nums', pingResult.success ? 'text-cyan-300' : 'text-rose-400']"
