@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, onMounted, nextTick } from 'vue'
+import { defineComponent, ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useContactsStore } from '../stores/contacts.js'
 import { useNodesStore } from '../stores/nodes.js'
@@ -70,11 +70,9 @@ export default defineComponent({
       myInfoLoading.value = true
       try {
         const data = await nodes.getContactUri(nodes.activeNodeId)
-        myInfoUri.value = data.uri
-        nextTick(() => renderQr(data.uri))
+        myInfoUri.value = typeof data === 'string' ? data : data.uri
       } catch (e) {
         toast.error(e.message || 'Failed to get contact URI')
-        myInfoLoading.value = false
       } finally {
         myInfoLoading.value = false
       }
@@ -89,6 +87,9 @@ export default defineComponent({
         color: { dark: '#e4e4e7', light: '#09090f' },
       })
     }
+
+    // Render QR after DOM updates (flush:post ensures canvas is mounted)
+    watch(myInfoUri, (uri) => { if (uri) renderQr(uri) }, { flush: 'post' })
 
     onMounted(async () => {
       if (!contacts.contacts.length) {
