@@ -25,6 +25,9 @@ class NodeManager:
     # ------------------------------------------------------------------
 
     def start(self, app) -> None:
+        if self._thread is not None and self._thread.is_alive():
+            logger.warning('NodeManager.start() called twice — ignoring')
+            return
         self._app = app
         self._loop = asyncio.new_event_loop()
         self._thread = threading.Thread(

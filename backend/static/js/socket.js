@@ -17,7 +17,7 @@ export function connectSocket() {
   const auth = useAuthStore()
   _socket = io({
     auth: (cb) => { cb({ token: useAuthStore().accessToken || '' }) },
-    transports: ['websocket', 'polling'],
+    transports: ['polling'],
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 8000,
