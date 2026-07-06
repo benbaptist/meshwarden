@@ -12,19 +12,29 @@ export function getSocket() {
 }
 
 export function connectSocket() {
-  if (_socket && _socket.connected) return _socket
+  if (_socket) {
+    if (!_socket.connected) _socket.connect()
+    return _socket
+  }
 
-  const auth = useAuthStore()
   _socket = io({
+    // auth callback is re-evaluated on every (re)connect attempt,
+    // so it always picks up the freshest access token.
     auth: (cb) => { cb({ token: useAuthStore().accessToken || '' }) },
-    transports: ['polling'],
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 8000,
   })
 
-  _socket.on('connect_error', (err) => {
+  let refreshing = false
+  _socket.on('connect_error', async (err) => {
     console.warn('[socket] connect_error:', err.message)
+    // Server rejected our JWT (expired access token) — refresh it so the
+    // next automatic reconnect attempt authenticates successfully.
+    if (err.message === 'unauthorized' && !refreshing) {
+      refreshing = true
+      try { await useAuthStore().refresh() } finally { refreshing = false }
+    }
   })
 
   return _socket

@@ -1,4 +1,4 @@
-from flask_socketio import emit
+from flask_socketio import emit, ConnectionRefusedError
 
 from ..auth.utils import verify_access_token
 from ..extensions import db
@@ -8,18 +8,20 @@ def register_handlers(socketio) -> None:
 
     @socketio.on('connect')
     def on_connect(auth):
+        # Raise (instead of returning False) so the client receives a
+        # distinguishable 'unauthorized' message and can refresh its JWT.
         token = (auth or {}).get('token', '')
         if not token:
-            return False  # Reject unauthenticated connections
+            raise ConnectionRefusedError('unauthorized')
 
         from ..db.models import AdminUser
         payload = verify_access_token(token)
         if not payload:
-            return False
+            raise ConnectionRefusedError('unauthorized')
 
         user = db.session.get(AdminUser, int(payload['sub']))
         if not user:
-            return False
+            raise ConnectionRefusedError('unauthorized')
 
         # Send current node connection statuses on connect
         from ..node.manager import node_manager
