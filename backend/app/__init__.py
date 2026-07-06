@@ -54,6 +54,8 @@ def _apply_migrations(db) -> None:
         for col_name, col_def in [
             ('last_heard', 'DATETIME'),
             ('favorite', 'BOOLEAN NOT NULL DEFAULT 0'),
+            ('tags', "TEXT NOT NULL DEFAULT ''"),
+            ('notes', 'TEXT'),
         ]:
             if col_name not in existing:
                 conn.execute(db.text(f'ALTER TABLE contacts ADD COLUMN {col_name} {col_def}'))
