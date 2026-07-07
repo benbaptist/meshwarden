@@ -28,8 +28,12 @@ class NodeConnection:
     async def connect(self) -> None:
         try:
             from meshcore import MeshCore
-            logger.info(f'Node {self.node_id}: connecting via {self._node.connection_type} '
-                        f'({self._node.host}:{self._node.port} if tcp else {self._node.device_path})')
+            target = (
+                f'{self._node.host}:{self._node.port}'
+                if self._node.connection_type == 'tcp'
+                else self._node.device_path
+            )
+            logger.info(f'Node {self.node_id}: connecting via {self._node.connection_type} ({target})')
             if self._node.connection_type == 'tcp':
                 self._mc = await MeshCore.create_tcp(
                     self._node.host,

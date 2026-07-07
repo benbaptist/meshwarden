@@ -215,13 +215,13 @@ def ping_contact(contact_id: int):
 
     # req_status_sync sends the binary status request and waits for the
     # matching STATUS_RESPONSE (tag-filtered) inside the meshcore library.
-    # timeout=0 → use the firmware-suggested timeout, which is derived from
-    # the contact's path length; min_timeout is the floor for direct paths.
+    # Pings are zero-hop by design, so 3s is generous (official app uses 2s).
+    PING_TIMEOUT = 3.0
     started = time.monotonic()
     try:
         res = node_manager.run_async(
-            conn.mc.commands.req_status_sync(contact_dict, timeout=0, min_timeout=3.0),
-            timeout=20,
+            conn.mc.commands.req_status_sync(contact_dict, timeout=PING_TIMEOUT),
+            timeout=PING_TIMEOUT + 2,
         )
     except Exception:
         logger.exception('Ping failed for contact %d', contact_id)

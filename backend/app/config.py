@@ -1,6 +1,16 @@
 import os
 from datetime import timedelta
 
+# Optional comma-separated origin allowlist for Socket.IO CORS.
+# Empty → None: engine.io then only accepts same-origin requests, which
+# matches any host/port the dashboard is actually served on (localhost,
+# LAN IP, reverse proxy) without needing configuration.
+_origins = [
+    o.strip()
+    for o in os.environ.get('ALLOWED_ORIGINS', '').split(',')
+    if o.strip()
+]
+
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'CHANGE-ME-IN-PRODUCTION')
@@ -10,16 +20,12 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_ACCESS_EXPIRES = timedelta(minutes=15)
     JWT_REFRESH_EXPIRES = timedelta(days=30)
-    ALLOWED_ORIGINS = [
-        o.strip()
-        for o in os.environ.get('ALLOWED_ORIGINS', 'http://localhost:5001,http://localhost:5000').split(',')
-    ]
+    ALLOWED_ORIGINS = _origins or None
     RATELIMIT_STORAGE_URI = 'memory://'
 
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    ALLOWED_ORIGINS = '*'
 
 
 class ProductionConfig(Config):

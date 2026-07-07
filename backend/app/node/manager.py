@@ -36,8 +36,10 @@ class NodeManager:
         )
         self._thread.start()
         logger.info('NodeManager: asyncio event loop started')
-        # Connect all enabled nodes from DB
-        self.run_async(self._reconnect_enabled())
+        # Connect enabled nodes in the background — must NOT block Flask
+        # startup (a busy/unreachable node would make the dashboard
+        # unreachable until the connection attempt times out).
+        asyncio.run_coroutine_threadsafe(self._connect_enabled_loop(), self._loop)
 
     def _run_loop(self) -> None:
         asyncio.set_event_loop(self._loop)
@@ -56,7 +58,22 @@ class NodeManager:
     # Connection management (internal async)
     # ------------------------------------------------------------------
 
-    async def _reconnect_enabled(self) -> None:
+    async def _connect_enabled_loop(self) -> None:
+        """Connect all enabled nodes at startup, then retry failed/dropped
+        connections every 30s. Manually disconnected nodes are removed from
+        _connections and therefore not retried."""
+        await self._connect_enabled()
+        while True:
+            await asyncio.sleep(30)
+            for node_id, conn in list(self._connections.items()):
+                if not conn.is_connected:
+                    logger.info(f'NodeManager: retrying connection to node {node_id}')
+                    try:
+                        await self._connect(node_id)
+                    except Exception:
+                        logger.exception(f'NodeManager: retry failed for node {node_id}')
+
+    async def _connect_enabled(self) -> None:
         with self._app.app_context():
             from ..extensions import db
             from ..db.models import Node
