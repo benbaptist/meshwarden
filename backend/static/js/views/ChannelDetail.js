@@ -19,20 +19,32 @@ export default defineComponent({
     const channelIdx = Number(route.params.idx)
     const threadKey = computed(() => `channel-${nodes.activeNodeId}-${channelIdx}`)
 
-    const channelName = ref(null)  // null until loaded
+    const channel = ref(null)  // null until loaded
     const sending = ref(false)
+    const showDelete = ref(false)
+    const deleting = ref(false)
 
     const thread = computed(() => messages.threads[threadKey.value] || [])
 
+    const channelName = computed(() => {
+      if (!channel.value) return null
+      const raw = (channel.value.channel_name || '').trim()
+      if (!raw || raw === '#Public') return 'Public'
+      return raw.startsWith('#') ? raw.slice(1) : raw
+    })
+
+    const chanType = computed(() => {
+      if (!channel.value) return null
+      const name = (channel.value.channel_name || '').trim()
+      if (name === 'Public' || name === '#Public') return 'public'
+      if (name.startsWith('#')) return 'hashtag'
+      return 'private'
+    })
+
     async function load() {
       try {
-        // Fetch channel info to get the display name
         const channels = await api.json(`/api/channels/?node_id=${nodes.activeNodeId}`)
-        const ch = channels.find((c) => c.channel_idx === channelIdx)
-        const raw = (ch?.channel_name || '').trim()
-        channelName.value = (!raw || raw === '#Public')
-          ? 'Public'
-          : (raw.startsWith('#') ? raw.slice(1) : raw)
+        channel.value = channels.find((c) => c.channel_idx === channelIdx) || null
 
         messages.clearUnread(threadKey.value)
         await messages.fetchThread(threadKey.value, {
@@ -41,6 +53,30 @@ export default defineComponent({
         })
       } catch {
         toast.error('Failed to load channel')
+      }
+    }
+
+    async function copyKey() {
+      try {
+        await navigator.clipboard.writeText(channel.value.channel_secret)
+        toast.success('Key copied to clipboard')
+      } catch {
+        toast.error('Could not copy key')
+      }
+    }
+
+    async function deleteChannel() {
+      if (deleting.value) return
+      deleting.value = true
+      try {
+        await api.json(`/api/channels/${channelIdx}?node_id=${nodes.activeNodeId}`, { method: 'DELETE' })
+        toast.success(`Left ${channelName.value}`)
+        router.push('/channels')
+      } catch (e) {
+        toast.error(e.message || 'Failed to remove channel')
+      } finally {
+        deleting.value = false
+        showDelete.value = false
       }
     }
 
@@ -70,7 +106,10 @@ export default defineComponent({
       if (contact) router.push(`/contacts/${contact.id}`)
     }
 
-    return { channelIdx, channelName, thread, sending, sendMsg, onSenderClick, router }
+    return {
+      channelIdx, channel, channelName, chanType, thread, sending, sendMsg, onSenderClick, router,
+      showDelete, deleting, copyKey, deleteChannel,
+    }
   },
   template: `
     <div class="h-full flex flex-col">
@@ -85,9 +124,10 @@ export default defineComponent({
 
         <div
           class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
-          :style="channelIdx === 0 ? 'background: linear-gradient(135deg, #7c3aed, #9333ea); color: white;' : 'background: rgba(255,255,255,0.06); color: rgb(161,161,170);'"
+          :style="chanType === 'public' ? 'background: linear-gradient(135deg, #7c3aed, #9333ea); color: white;' : 'background: rgba(255,255,255,0.06); color: rgb(161,161,170);'"
         >
-          {{ channelIdx === 0 ? '#' : channelIdx }}
+          <template v-if="chanType === 'private'"><Icon name="key" :size="15" /></template>
+          <template v-else>#</template>
         </div>
 
         <div class="flex-1 min-w-0">
@@ -95,10 +135,37 @@ export default defineComponent({
           <Spinner v-else class="h-4 w-4" />
           <div class="text-[10px] text-zinc-600">Channel {{ channelIdx }}</div>
         </div>
+
+        <button
+          v-if="chanType === 'private'"
+          @click="copyKey"
+          class="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-200 transition-colors flex-shrink-0"
+          title="Copy secret key"
+        >
+          <Icon name="key" :size="17" />
+        </button>
+        <button
+          v-if="channel"
+          @click="showDelete = true"
+          class="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-500 hover:text-rose-400 transition-colors flex-shrink-0"
+          title="Remove channel"
+        >
+          <Icon name="trash" :size="17" />
+        </button>
       </div>
 
       <!-- Chat -->
       <ChatPanel :thread="thread" :sending="sending" :focused="true" @send="sendMsg" @sender-click="onSenderClick" />
+
+      <ConfirmDialog
+        :show="showDelete"
+        title="Remove channel"
+        :message="'Remove ' + channelName + ' from this node? ' + (chanType === 'private' ? 'You will need the secret key to rejoin.' : 'You can rejoin it at any time.')"
+        confirm-label="Remove"
+        danger
+        @confirm="deleteChannel"
+        @cancel="showDelete = false"
+      />
     </div>
   `,
 })
